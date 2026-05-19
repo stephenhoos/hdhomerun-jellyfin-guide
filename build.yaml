@@ -1,0 +1,17 @@
+---
+name: "HDHomeRun Guide"
+guid: "dedaf64f-c6d3-4b51-b88e-64873ec088a5"
+version: "0.1.0.0"
+targetAbi: "10.9.0.0"
+framework: "net9.0"
+overview: "Server-side HDHomeRun guide refresh for Jellyfin"
+description: >
+  Downloads SiliconDust HDHomeRun guide data with the tuner DeviceAuth token
+  and writes Jellyfin-compatible XMLTV and M3U files from a scheduled server task.
+category: "Live TV"
+owner: "community"
+artifacts:
+- "Jellyfin.Plugin.HDHomeRunGuide.dll"
+changelog: >
+  Initial server-side plugin scaffold with tuner setup, subnet scan, manual
+  refresh, and scheduled XMLTV/M3U generation.

@@ -1,0 +1,145 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Jellyfin.Plugin.HDHomeRunGuide.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace Jellyfin.Plugin.HDHomeRunGuide.Services;
+
+/// <summary>
+/// Coordinates guide refreshes and stores refresh status in plugin configuration.
+/// </summary>
+public sealed class HDHomeRunGuideService
+{
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly HDHomeRunClient _client;
+    private readonly GuideWriter _writer;
+    private readonly LiveTvConfigurator _liveTvConfigurator;
+    private readonly ILogger<HDHomeRunGuideService> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HDHomeRunGuideService"/> class.
+    /// </summary>
+    /// <param name="client">HDHomeRun client.</param>
+    /// <param name="writer">Guide writer.</param>
+    /// <param name="liveTvConfigurator">Live TV configurator.</param>
+    /// <param name="logger">Logger.</param>
+    public HDHomeRunGuideService(
+        HDHomeRunClient client,
+        GuideWriter writer,
+        LiveTvConfigurator liveTvConfigurator,
+        ILogger<HDHomeRunGuideService> logger)
+    {
+        _client = client;
+        _writer = writer;
+        _liveTvConfigurator = liveTvConfigurator;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Refreshes guide and lineup files.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Refresh result.</returns>
+    public async Task<RefreshResult> RefreshAsync(CancellationToken cancellationToken)
+    {
+        await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            return await RefreshCoreAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
+    private async Task<RefreshResult> RefreshCoreAsync(CancellationToken cancellationToken)
+    {
+        var plugin = Plugin.Instance ?? throw new InvalidOperationException("Plugin instance is not available.");
+        var config = plugin.Configuration;
+
+        if (string.IsNullOrWhiteSpace(config.TunerAddress))
+        {
+            throw new InvalidOperationException("Configure a tuner IP address before refreshing guide data.");
+        }
+
+        try
+        {
+            var discover = await _client.GetDiscoverInfoAsync(config.TunerAddress, cancellationToken).ConfigureAwait(false);
+            var lineup = await _client.GetLineupAsync(discover, cancellationToken).ConfigureAwait(false);
+            var result = config.UseXmlTvGuideData
+                ? await _writer.WriteXmlTvAsync(
+                    await _client.GetXmlTvAsync(discover.DeviceAuth, cancellationToken).ConfigureAwait(false),
+                    lineup,
+                    plugin.DataFolderPath,
+                    config.SkipDisabledChannels,
+                    cancellationToken).ConfigureAwait(false)
+                : await _writer.WriteAsync(
+                    await _client.GetGuideAsync(discover.DeviceAuth, cancellationToken).ConfigureAwait(false),
+                    lineup,
+                    plugin.DataFolderPath,
+                    config.SkipDisabledChannels,
+                    cancellationToken).ConfigureAwait(false);
+            result = result with { TunerCount = discover.TunerCount };
+
+            config.LastGuidePath = result.GuidePath;
+            config.LastM3uPath = result.M3uPath;
+            config.LastRefreshUtc = DateTimeOffset.UtcNow.ToString("O");
+            config.LastTunerCount = discover.TunerCount;
+            config.LastError = string.Empty;
+
+            if (config.AutoConfigureLiveTv)
+            {
+                await _liveTvConfigurator.ConfigureAsync(result, discover, config, cancellationToken).ConfigureAwait(false);
+            }
+
+            plugin.UpdateConfiguration(config);
+
+            _logger.LogInformation(
+                "HDHomeRun {GuideSource} refresh wrote {ChannelCount} channels and {ProgrammeCount} programmes to {GuidePath}",
+                result.GuideSource,
+                result.ChannelCount,
+                result.ProgrammeCount,
+                result.GuidePath);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            config.LastError = ex.Message;
+            plugin.UpdateConfiguration(config);
+            _logger.LogError(ex, "HDHomeRun guide refresh failed");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Scans a subnet for tuners.
+    /// </summary>
+    /// <param name="subnet">CIDR subnet.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Discovered tuners.</returns>
+    public Task<IReadOnlyList<DiscoveredTuner>> DiscoverTunersAsync(string subnet, CancellationToken cancellationToken)
+    {
+        return _client.DiscoverTunersAsync(subnet, cancellationToken);
+    }
+
+    /// <summary>
+    /// Tests the configured tuner address.
+    /// </summary>
+    /// <param name="address">Tuner address.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Discovered tuner.</returns>
+    public async Task<DiscoveredTuner> TestTunerAsync(string address, CancellationToken cancellationToken)
+    {
+        var discover = await _client.GetDiscoverInfoAsync(address, cancellationToken).ConfigureAwait(false);
+        return new DiscoveredTuner(
+            HDHomeRunClient.NormalizeBaseUri(address).Host,
+            discover.DeviceId,
+            string.IsNullOrWhiteSpace(discover.FriendlyName) ? "HDHomeRun" : discover.FriendlyName,
+            discover.TunerCount);
+    }
+}

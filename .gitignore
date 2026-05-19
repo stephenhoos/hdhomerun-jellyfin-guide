@@ -1,0 +1,24 @@
+# Generated guide and tuner files
+hdhomerun-guide.xml
+hdhomerun-lineup.m3u
+*.xmltv
+
+# Logs and local runtime state
+logs/
+*.log
+
+# .NET/Jellyfin plugin build outputs
+bin/
+obj/
+artifacts/
+.dotnet-local/
+.dotnet-sdk-unpack/
+
+# Local/private Jellyfin exports
+jellyfin-livetv.xml
+*.db
+*.sqlite
+*.sqlite3
+
+# macOS clutter
+.DS_Store

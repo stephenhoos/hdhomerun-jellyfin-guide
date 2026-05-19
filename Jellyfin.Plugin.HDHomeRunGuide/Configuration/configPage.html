@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HDHomeRun Guide</title>
+</head>
+<body>
+    <div id="hdhomerunGuideConfigPage" data-role="page" class="page type-interior pluginConfigurationPage">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="hdhomerunGuideConfigForm">
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h2 class="sectionTitle">HDHomeRun Guide</h2>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="txtTunerAddress">Tuner IP or URL</label>
+                        <input is="emby-input" id="txtTunerAddress" name="txtTunerAddress" type="text" placeholder="192.0.2.10" />
+                        <div class="fieldDescription">The plugin reads DeviceAuth from this tuner's discover.json on the Jellyfin server.</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="txtScanSubnet">Scan subnet</label>
+                        <input is="emby-input" id="txtScanSubnet" name="txtScanSubnet" type="text" placeholder="192.168.1.0/24" />
+                        <div class="fieldDescription">Optional. Scans are limited to /24 through /30 networks.</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="txtRefreshHours">Refresh interval in hours</label>
+                        <input is="emby-input" id="txtRefreshHours" name="txtRefreshHours" type="number" min="1" max="168" />
+                    </div>
+
+                    <label class="checkboxContainer">
+                        <input is="emby-checkbox" id="chkSkipDrm" name="chkSkipDrm" type="checkbox" />
+                        <span>Skip DRM channels in generated M3U</span>
+                    </label>
+
+                    <label class="checkboxContainer">
+                        <input is="emby-checkbox" id="chkUseXmlTvGuideData" name="chkUseXmlTvGuideData" type="checkbox" />
+                        <span>Use paid DVR XMLTV guide data</span>
+                    </label>
+
+                    <label class="checkboxContainer">
+                        <input is="emby-checkbox" id="chkAutoConfigureLiveTv" name="chkAutoConfigureLiveTv" type="checkbox" />
+                        <span>Update Jellyfin Live TV M3U/XMLTV paths after refresh</span>
+                    </label>
+
+                    <div class="button-submit-section">
+                        <button is="emby-button" type="button" class="raised button-submit block" id="btnScan">
+                            <span>Scan Network</span>
+                        </button>
+                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnTest">
+                            <span>Test Tuner</span>
+                        </button>
+                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnRefresh">
+                            <span>Refresh Now</span>
+                        </button>
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Save</span>
+                        </button>
+                    </div>
+
+                    <div id="hdhomerunGuideStatus" class="fieldDescription" style="margin-top:2em;white-space:pre-wrap;"></div>
+                    <div id="hdhomerunGuideResults" style="margin-top:1em;"></div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                const pluginId = 'dedaf64f-c6d3-4b51-b88e-64873ec088a5';
+
+                function page() {
+                    return document.querySelector('#hdhomerunGuideConfigPage');
+                }
+
+                function setStatus(message) {
+                    page().querySelector('#hdhomerunGuideStatus').textContent = message || '';
+                }
+
+                function valueOf(item, lowerName, upperName) {
+                    return item[lowerName] === undefined ? item[upperName] : item[lowerName];
+                }
+
+                function problemMessage(err, fallback) {
+                    if (!err) {
+                        return fallback;
+                    }
+
+                    return err.message || err.Message || err.detail || err.Detail || err.title || err.Title || fallback;
+                }
+
+                function renderTuners(tuners) {
+                    const container = page().querySelector('#hdhomerunGuideResults');
+                    container.innerHTML = '';
+                    if (!tuners || !tuners.length) {
+                        container.textContent = 'No HDHomeRun tuners found.';
+                        return;
+                    }
+
+                    tuners.forEach(function (tuner) {
+                        const address = valueOf(tuner, 'address', 'Address');
+                        const friendlyName = valueOf(tuner, 'friendlyName', 'FriendlyName');
+                        const tunerCount = valueOf(tuner, 'tunerCount', 'TunerCount');
+                        const button = document.createElement('button');
+                        button.setAttribute('is', 'emby-button');
+                        button.type = 'button';
+                        button.className = 'raised button-cancel block';
+                        button.textContent = friendlyName + ' ' + address + ' (' + tunerCount + ' tuners)';
+                        button.addEventListener('click', function () {
+                            page().querySelector('#txtTunerAddress').value = address;
+                            setStatus('Selected ' + address + '. Save to refresh now and enable automatic updates.');
+                        });
+                        container.appendChild(button);
+                    });
+                }
+
+                function loadConfig() {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        page().querySelector('#txtTunerAddress').value = config.TunerAddress || '';
+                        page().querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
+                        page().querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 12;
+                        page().querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
+                        page().querySelector('#chkUseXmlTvGuideData').checked = config.UseXmlTvGuideData === true;
+                        page().querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
+
+                        const lines = [];
+                        if (config.LastRefreshUtc) {
+                            lines.push('Last refresh: ' + config.LastRefreshUtc);
+                        }
+                        if (config.LastTunerCount) {
+                            lines.push('Tuners: ' + config.LastTunerCount);
+                        }
+                        if (config.LastGuidePath) {
+                            lines.push('XMLTV: ' + config.LastGuidePath);
+                        }
+                        if (config.LastM3uPath) {
+                            lines.push('M3U: ' + config.LastM3uPath);
+                        }
+                        if (config.LastError) {
+                            lines.push('Last error: ' + config.LastError);
+                        }
+                        setStatus(lines.join('\n'));
+                    }).finally(Dashboard.hideLoadingMsg);
+                }
+
+                function saveConfig() {
+                    return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.TunerAddress = page().querySelector('#txtTunerAddress').value;
+                        config.ScanSubnet = page().querySelector('#txtScanSubnet').value;
+                        config.RefreshIntervalHours = parseInt(page().querySelector('#txtRefreshHours').value || '12', 10);
+                        config.SkipDisabledChannels = page().querySelector('#chkSkipDrm').checked;
+                        config.UseXmlTvGuideData = page().querySelector('#chkUseXmlTvGuideData').checked;
+                        config.AutoConfigureLiveTv = page().querySelector('#chkAutoConfigureLiveTv').checked;
+                        return ApiClient.updatePluginConfiguration(pluginId, config);
+                    });
+                }
+
+                page().addEventListener('viewshow', loadConfig);
+
+                page().querySelector('#hdhomerunGuideConfigForm').addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    saveConfig().then(function (result) {
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                        setStatus('Configuration saved. Refreshing guide data now; future updates will run automatically.');
+                        return ApiClient.ajax({
+                            type: 'POST',
+                            url: ApiClient.getUrl('HDHomeRunGuide/Refresh')
+                        });
+                    }).then(function (result) {
+                        setStatus('Refresh complete.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
+                        loadConfig();
+                    }).catch(function (err) {
+                        setStatus(problemMessage(err, 'Configuration saved, but the automatic refresh failed.'));
+                    }).finally(Dashboard.hideLoadingMsg);
+                });
+
+                page().querySelector('#btnScan').addEventListener('click', function () {
+                    const subnet = page().querySelector('#txtScanSubnet').value;
+                    Dashboard.showLoadingMsg();
+                    ApiClient.ajax({
+                        type: 'GET',
+                        url: ApiClient.getUrl('HDHomeRunGuide/Discover', { subnet: subnet })
+                    }).then(renderTuners).catch(function (err) {
+                        setStatus(problemMessage(err, 'Network scan failed.'));
+                    }).finally(Dashboard.hideLoadingMsg);
+                });
+
+                page().querySelector('#btnTest').addEventListener('click', function () {
+                    const address = page().querySelector('#txtTunerAddress').value;
+                    Dashboard.showLoadingMsg();
+                    ApiClient.ajax({
+                        type: 'GET',
+                        url: ApiClient.getUrl('HDHomeRunGuide/Test', { address: address })
+                    }).then(function (tuner) {
+                        setStatus('Found ' + valueOf(tuner, 'friendlyName', 'FriendlyName') + ' ' + valueOf(tuner, 'deviceId', 'DeviceId') + ' at ' + valueOf(tuner, 'address', 'Address') + '.');
+                    }).catch(function (err) {
+                        setStatus(problemMessage(err, 'Tuner test failed.'));
+                    }).finally(Dashboard.hideLoadingMsg);
+                });
+
+                page().querySelector('#btnRefresh').addEventListener('click', function () {
+                    Dashboard.showLoadingMsg();
+                    saveConfig().then(function () {
+                        return ApiClient.ajax({
+                            type: 'POST',
+                            url: ApiClient.getUrl('HDHomeRunGuide/Refresh')
+                        });
+                    }).then(function (result) {
+                        setStatus('Refresh complete.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
+                    }).catch(function (err) {
+                        setStatus(problemMessage(err, 'Refresh failed.'));
+                    }).finally(Dashboard.hideLoadingMsg);
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
