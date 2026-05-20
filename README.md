@@ -16,7 +16,8 @@ It supports two guide modes:
 ## Features
 
 - Configurable HDHomeRun tuner IP/URL from the Jellyfin plugin page.
-- Optional subnet scan to find HDHomeRun devices from the Jellyfin server.
+- **Add My Tuners** button that uses Jellyfin's built-in HDHomeRun discovery.
+- Optional subnet scan fallback when Jellyfin discovery returns no devices.
 - Automatic background refresh on a configurable interval.
 - Immediate refresh after saving plugin configuration.
 - Standard and paid DVR XMLTV guide modes.
@@ -73,7 +74,7 @@ macOS: ~/Library/Application Support/jellyfin/plugins/HDHomeRun Guide_0.1.0.0/
 In Jellyfin:
 
 1. Open **Dashboard -> Plugins -> HDHomeRun Guide**.
-2. Enter your tuner IP or URL, such as `192.168.1.4`.
+2. Click **Add My Tuners** to find your HDHomeRun with Jellyfin's built-in tuner discovery and configure Live TV automatically.
 3. Choose the guide source:
    - Leave **Use paid DVR XMLTV guide data** unchecked for the standard SiliconDust guide API.
    - Check it if you have SiliconDust's paid DVR guide service.
@@ -82,6 +83,8 @@ In Jellyfin:
 6. Save.
 
 Saving triggers an immediate refresh. Future refreshes run in the background.
+
+You can still enter a tuner IP or URL manually, such as `192.168.1.4`, and use **Find HDHomeRun Tuners** for troubleshooting. Discovery is deduplicated by physical device, so a two-tuner HDHomeRun appears as one device with two available tuners.
 
 ## Notes
 

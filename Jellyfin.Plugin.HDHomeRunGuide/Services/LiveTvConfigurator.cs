@@ -111,6 +111,28 @@ public sealed class LiveTvConfigurator
         await _guideManager.RefreshGuide(new Progress<double>(), cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Uses Jellyfin's built-in tuner discovery to find HDHomeRun devices.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Built-in HDHomeRun tuner host discoveries.</returns>
+    public async Task<IReadOnlyList<TunerHostInfo>> DiscoverHdhomerunTunersAsync(CancellationToken cancellationToken)
+    {
+        var results = new List<TunerHostInfo>();
+
+        await foreach (var tuner in _tunerHostManager.DiscoverTuners(false).WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            if (!IsHdhomerunTuner(tuner))
+            {
+                continue;
+            }
+
+            results.Add(tuner);
+        }
+
+        return results;
+    }
+
     private (string TunerHostId, string ListingsProviderId) FindExistingLiveTvIds(RefreshResult result)
     {
         var configPath = Path.Combine(_configurationManager.ApplicationPaths.ConfigurationDirectoryPath, "livetv.xml");
@@ -182,6 +204,13 @@ public sealed class LiveTvConfigurator
     {
         return !string.IsNullOrWhiteSpace(value)
             && value.StartsWith(FriendlyNamePrefix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsHdhomerunTuner(TunerHostInfo tuner)
+    {
+        return string.Equals(tuner.Type, "hdhomerun", StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(tuner.FriendlyName)
+                && tuner.FriendlyName.Contains("HDHomeRun", StringComparison.OrdinalIgnoreCase));
     }
 
     private static NameValuePair[] BuildChannelMappings(string m3uPath)

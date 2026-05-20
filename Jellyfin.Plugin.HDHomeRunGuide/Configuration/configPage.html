@@ -45,8 +45,11 @@
                     </label>
 
                     <div class="button-submit-section">
+                        <button is="emby-button" type="button" class="raised button-submit block" id="btnAddMyTuners">
+                            <span>Add My Tuners</span>
+                        </button>
                         <button is="emby-button" type="button" class="raised button-submit block" id="btnScan">
-                            <span>Scan Network</span>
+                            <span>Find HDHomeRun Tuners</span>
                         </button>
                         <button is="emby-button" type="button" class="raised button-cancel block" id="btnTest">
                             <span>Test Tuner</span>
@@ -178,11 +181,26 @@
                 page().querySelector('#btnScan').addEventListener('click', function () {
                     const subnet = page().querySelector('#txtScanSubnet').value;
                     Dashboard.showLoadingMsg();
+                    setStatus('Finding HDHomeRun tuners with Jellyfin discovery...');
                     ApiClient.ajax({
                         type: 'GET',
                         url: ApiClient.getUrl('HDHomeRunGuide/Discover', { subnet: subnet })
                     }).then(renderTuners).catch(function (err) {
-                        setStatus(problemMessage(err, 'Network scan failed.'));
+                        setStatus(problemMessage(err, 'HDHomeRun discovery failed.'));
+                    }).finally(Dashboard.hideLoadingMsg);
+                });
+
+                page().querySelector('#btnAddMyTuners').addEventListener('click', function () {
+                    Dashboard.showLoadingMsg();
+                    setStatus('Finding HDHomeRun tuners and configuring Live TV...');
+                    ApiClient.ajax({
+                        type: 'POST',
+                        url: ApiClient.getUrl('HDHomeRunGuide/AddMyTuners')
+                    }).then(function (result) {
+                        setStatus('Tuners added and guide refreshed.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
+                        loadConfig();
+                    }).catch(function (err) {
+                        setStatus(problemMessage(err, 'Could not add HDHomeRun tuners.'));
                     }).finally(Dashboard.hideLoadingMsg);
                 });
 

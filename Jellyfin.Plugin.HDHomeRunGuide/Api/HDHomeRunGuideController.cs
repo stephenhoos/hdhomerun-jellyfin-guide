@@ -86,6 +86,24 @@ public sealed class HDHomeRunGuideController : ControllerBase
     }
 
     /// <summary>
+    /// Uses Jellyfin's built-in HDHomeRun discovery to select a tuner and configure Live TV.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Refresh result.</returns>
+    [HttpPost("AddMyTuners")]
+    public async Task<ActionResult<RefreshResult>> AddMyTuners(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _guideService.AddMyTunersAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            return Problem(RedactSecrets(ex.Message));
+        }
+    }
+
+    /// <summary>
     /// Runs an immediate guide refresh.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
