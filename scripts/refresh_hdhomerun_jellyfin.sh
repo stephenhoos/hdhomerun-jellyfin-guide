@@ -33,6 +33,11 @@ if [[ ! -f "$JELLYFIN_DB" ]]; then
   exit 0
 fi
 
+if [[ ! "$JELLYFIN_URL" =~ ^https?://(127\.0\.0\.1|localhost|::1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.) ]]; then
+  log "Refusing to send Jellyfin token to non-local URL: $JELLYFIN_URL"
+  exit 1
+fi
+
 token="$(sqlite3 "$JELLYFIN_DB" "select AccessToken from Devices order by DateLastActivity desc limit 1;")"
 if [[ -z "$token" ]]; then
   log "No Jellyfin access token found; files were updated but guide import was skipped"

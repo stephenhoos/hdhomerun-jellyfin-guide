@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,6 +51,7 @@ public sealed class HDHomeRunClient
     public async Task<DiscoverInfo> GetDiscoverInfoAsync(string address, CancellationToken cancellationToken)
     {
         var baseUri = NormalizeBaseUri(address);
+        EnsureAllowedLocalHttpUri(baseUri, nameof(address));
         var discover = await HttpClient.GetFromJsonAsync<DiscoverInfo>(
             new Uri(baseUri, "discover.json"),
             cancellationToken).ConfigureAwait(false);
@@ -63,6 +65,12 @@ public sealed class HDHomeRunClient
         {
             discover.LineupUrl = new Uri(baseUri, "lineup.json").ToString();
         }
+        else
+        {
+            var lineupUri = new Uri(discover.LineupUrl, UriKind.Absolute);
+            EnsureAllowedLocalHttpUri(lineupUri, nameof(discover.LineupUrl));
+            discover.LineupUrl = lineupUri.ToString();
+        }
 
         return discover;
     }
@@ -75,6 +83,7 @@ public sealed class HDHomeRunClient
     /// <returns>Lineup entries.</returns>
     public async Task<IReadOnlyList<LineupItem>> GetLineupAsync(DiscoverInfo discover, CancellationToken cancellationToken)
     {
+        EnsureAllowedLocalHttpUri(new Uri(discover.LineupUrl, UriKind.Absolute), nameof(discover.LineupUrl));
         var lineup = await HttpClient.GetFromJsonAsync<List<LineupItem>>(
             discover.LineupUrl,
             cancellationToken).ConfigureAwait(false);
@@ -175,6 +184,48 @@ public sealed class HDHomeRunClient
         }
 
         return new Uri(value, UriKind.Absolute);
+    }
+
+    private static void EnsureAllowedLocalHttpUri(Uri uri, string parameterName)
+    {
+        if (!uri.IsAbsoluteUri || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new ArgumentException("HDHomeRun URLs must be absolute HTTP or HTTPS URLs.", parameterName);
+        }
+
+        if (string.IsNullOrWhiteSpace(uri.Host) || !IPAddress.TryParse(uri.Host, out var address))
+        {
+            throw new ArgumentException("HDHomeRun URLs must use a literal local IP address.", parameterName);
+        }
+
+        if (!IsAllowedLocalAddress(address))
+        {
+            throw new ArgumentException("HDHomeRun URLs must point to a private, link-local, or loopback address.", parameterName);
+        }
+    }
+
+    private static bool IsAllowedLocalAddress(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address))
+        {
+            return true;
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            var bytes = address.GetAddressBytes();
+            return bytes[0] == 10
+                || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+                || (bytes[0] == 192 && bytes[1] == 168)
+                || (bytes[0] == 169 && bytes[1] == 254);
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            return address.IsIPv6LinkLocal || address.IsIPv6UniqueLocal;
+        }
+
+        return false;
     }
 
     private static string RedactGuideUrl(string url)

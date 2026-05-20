@@ -198,12 +198,19 @@ public sealed class GuideWriter
                 continue;
             }
 
-            var name = string.IsNullOrWhiteSpace(item.GuideName) ? item.GuideNumber : item.GuideName;
+            var guideNumber = SanitizeM3uText(item.GuideNumber);
+            var name = SanitizeM3uText(string.IsNullOrWhiteSpace(item.GuideName) ? item.GuideNumber : item.GuideName);
+            var url = SanitizeM3uText(item.Url);
+            if (string.IsNullOrWhiteSpace(guideNumber) || string.IsNullOrWhiteSpace(url))
+            {
+                continue;
+            }
+
             await writer.WriteLineAsync(
                 string.Create(
                     CultureInfo.InvariantCulture,
-                    $"#EXTINF:-1 tvg-id=\"{item.GuideNumber}\" tvg-name=\"{EscapeM3u(name)}\" tvg-chno=\"{item.GuideNumber}\",{name}")).ConfigureAwait(false);
-            await writer.WriteLineAsync(item.Url).ConfigureAwait(false);
+                    $"#EXTINF:-1 tvg-id=\"{EscapeM3uAttribute(guideNumber)}\" tvg-name=\"{EscapeM3uAttribute(name)}\" tvg-chno=\"{EscapeM3uAttribute(guideNumber)}\",{name}")).ConfigureAwait(false);
+            await writer.WriteLineAsync(url).ConfigureAwait(false);
             count++;
         }
 
@@ -283,9 +290,17 @@ public sealed class GuideWriter
         await writer.WriteEndElementAsync().ConfigureAwait(false);
     }
 
-    private static string EscapeM3u(string value)
+    private static string EscapeM3uAttribute(string value)
     {
         return value.Replace("\"", "'", StringComparison.Ordinal);
+    }
+
+    private static string SanitizeM3uText(string value)
+    {
+        return new string(value
+            .Where(ch => ch is not '\r' and not '\n' && !char.IsControl(ch))
+            .ToArray())
+            .Trim();
     }
 
     private static void PurgeOldGuideArtifacts(string outputDirectory, TimeSpan maximumAge)

@@ -11,6 +11,7 @@ logs/
 bin/
 obj/
 artifacts/
+dist/
 .dotnet-local/
 .dotnet-sdk-unpack/
 

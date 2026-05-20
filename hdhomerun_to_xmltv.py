@@ -156,14 +156,22 @@ def write_m3u(lineup: list[dict[str, Any]], output: Path) -> int:
         if not guide_number or not url:
             continue
 
-        tvg_id = str(guide_number)
-        name = str(guide_name)
-        lines.append(f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-name="{name}" tvg-chno="{guide_number}",{name}')
-        lines.append(str(url))
+        tvg_id = sanitize_m3u_text(str(guide_number))
+        name = sanitize_m3u_text(str(guide_name))
+        stream_url = sanitize_m3u_text(str(url))
+        if not tvg_id or not stream_url:
+            continue
+
+        lines.append(f'#EXTINF:-1 tvg-id="{tvg_id}" tvg-name="{name}" tvg-chno="{tvg_id}",{name}')
+        lines.append(stream_url)
         count += 1
 
     output.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return count
+
+
+def sanitize_m3u_text(value: str) -> str:
+    return "".join(ch for ch in value if ch not in "\r\n" and ord(ch) >= 32).strip().replace('"', "'")
 
 
 def indent_xml(element: ET.Element) -> None:
