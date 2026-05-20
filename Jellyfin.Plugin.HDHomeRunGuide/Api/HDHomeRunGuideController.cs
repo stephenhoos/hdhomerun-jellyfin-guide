@@ -136,7 +136,13 @@ public sealed class HDHomeRunGuideController : ControllerBase
 
     private static string RedactSecrets(string value)
     {
-        var index = value.IndexOf("DeviceAuth=", StringComparison.OrdinalIgnoreCase);
+        return RedactQueryValue(RedactQueryValue(RedactQueryValue(value, "DeviceAuth"), "Email"), "DeviceIDs");
+    }
+
+    private static string RedactQueryValue(string value, string key)
+    {
+        var marker = key + "=";
+        var index = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
         if (index < 0)
         {
             return value;
@@ -144,7 +150,7 @@ public sealed class HDHomeRunGuideController : ControllerBase
 
         var end = value.IndexOf('&', index);
         return end < 0
-            ? value[..index] + "DeviceAuth=REDACTED"
-            : value[..index] + "DeviceAuth=REDACTED" + value[end..];
+            ? value[..index] + key + "=REDACTED"
+            : value[..index] + key + "=REDACTED" + value[end..];
     }
 }

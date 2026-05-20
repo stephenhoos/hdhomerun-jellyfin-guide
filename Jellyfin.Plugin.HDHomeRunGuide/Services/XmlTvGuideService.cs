@@ -33,7 +33,7 @@ public sealed class XmlTvGuideService
         _logger = logger;
         if (!HttpClient.DefaultRequestHeaders.UserAgent.Any())
         {
-            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.0");
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.1");
         }
     }
 
@@ -41,12 +41,19 @@ public sealed class XmlTvGuideService
     /// Fetches XMLTV guide data from SiliconDust.
     /// </summary>
     /// <param name="deviceAuth">HDHomeRun DeviceAuth token.</param>
+    /// <param name="accountEmail">Optional SiliconDust account email.</param>
+    /// <param name="deviceIds">Optional comma-separated DeviceIDs for account email access.</param>
     /// <param name="requestPaidGuideWindow">Whether to ask for paid 14-day XMLTV data when available.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>XMLTV guide text.</returns>
-    public async Task<string> GetXmlTvAsync(string deviceAuth, bool requestPaidGuideWindow, CancellationToken cancellationToken)
+    public async Task<string> GetXmlTvAsync(
+        string deviceAuth,
+        string accountEmail,
+        string deviceIds,
+        bool requestPaidGuideWindow,
+        CancellationToken cancellationToken)
     {
-        var url = BuildXmlTvUri(deviceAuth, requestPaidGuideWindow);
+        var url = BuildXmlTvUri(deviceAuth, accountEmail, deviceIds, requestPaidGuideWindow);
         _logger.LogInformation("Fetching HDHomeRun XMLTV guide data from {GuideUrl}", RedactGuideUrl(url));
 
         return await HttpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
@@ -56,10 +63,27 @@ public sealed class XmlTvGuideService
     /// Builds the SiliconDust XMLTV endpoint URI.
     /// </summary>
     /// <param name="deviceAuth">HDHomeRun DeviceAuth token.</param>
+    /// <param name="accountEmail">Optional SiliconDust account email.</param>
+    /// <param name="deviceIds">Optional comma-separated DeviceIDs for account email access.</param>
     /// <param name="requestPaidGuideWindow">Whether to ask for paid 14-day XMLTV data when available.</param>
     /// <returns>XMLTV endpoint URI.</returns>
-    public static string BuildXmlTvUri(string deviceAuth, bool requestPaidGuideWindow)
+    public static string BuildXmlTvUri(string deviceAuth, string accountEmail, string deviceIds, bool requestPaidGuideWindow)
     {
+        var useAccountAccess = !string.IsNullOrWhiteSpace(accountEmail);
+        if (useAccountAccess)
+        {
+            if (string.IsNullOrWhiteSpace(deviceIds))
+            {
+                throw new ArgumentException("DeviceIDs are required when using SiliconDust account email XMLTV access.", nameof(deviceIds));
+            }
+
+            var emailUrl = "https://api.hdhomerun.com/api/xmltv?Email="
+                + Uri.EscapeDataString(accountEmail.Trim())
+                + "&DeviceIDs="
+                + Uri.EscapeDataString(NormalizeDeviceIds(deviceIds));
+            return requestPaidGuideWindow ? emailUrl + "&Duration=14" : emailUrl;
+        }
+
         if (string.IsNullOrWhiteSpace(deviceAuth))
         {
             throw new ArgumentException("DeviceAuth is required.", nameof(deviceAuth));
@@ -67,6 +91,15 @@ public sealed class XmlTvGuideService
 
         var url = "https://api.hdhomerun.com/api/xmltv?DeviceAuth=" + Uri.EscapeDataString(deviceAuth);
         return requestPaidGuideWindow ? url + "&Duration=14" : url;
+    }
+
+    private static string NormalizeDeviceIds(string deviceIds)
+    {
+        return string.Join(
+            ',',
+            deviceIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
     }
 
     private static string RedactGuideUrl(string url)
@@ -77,6 +110,6 @@ public sealed class XmlTvGuideService
             return url;
         }
 
-        return url[..question] + "?DeviceAuth=REDACTED";
+        return url[..question] + "?REDACTED";
     }
 }

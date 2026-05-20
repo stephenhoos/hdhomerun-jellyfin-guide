@@ -38,7 +38,7 @@ public sealed class HDHomeRunClient
         _logger = logger;
         if (!HttpClient.DefaultRequestHeaders.UserAgent.Any())
         {
-            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.0");
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.1");
         }
     }
 
@@ -171,7 +171,7 @@ public sealed class HDHomeRunClient
 
         if (!IsAllowedLocalAddress(address))
         {
-            throw new ArgumentException("HDHomeRun URLs must point to a private, link-local, or loopback address.", parameterName);
+            throw new ArgumentException("HDHomeRun URLs must point to a private or link-local address.", parameterName);
         }
     }
 
@@ -179,7 +179,7 @@ public sealed class HDHomeRunClient
     {
         if (IPAddress.IsLoopback(address))
         {
-            return true;
+            return false;
         }
 
         if (address.AddressFamily == AddressFamily.InterNetwork)

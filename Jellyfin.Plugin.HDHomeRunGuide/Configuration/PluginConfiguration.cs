@@ -33,6 +33,11 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     public bool RequestPaidXmlTvGuideData { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional SiliconDust account email for Email+DeviceIDs XMLTV access.
+    /// </summary>
+    public string XmlTvAccountEmail { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the plugin should update Jellyfin Live TV paths after refresh.
     /// </summary>
     public bool AutoConfigureLiveTv { get; set; } = true;

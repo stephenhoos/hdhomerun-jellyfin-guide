@@ -14,7 +14,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree as ET  # nosemgrep: python.lang.security.use-defused-xml.use-defused-xml
 
 
 DEFAULT_TIMEOUT = 20
@@ -27,9 +27,10 @@ ALLOWED_IPV4_NETWORKS = (
 
 
 def fetch_json(url: str, timeout: int = DEFAULT_TIMEOUT) -> Any:
+    url = validate_local_http_url(url, "HDHomeRun URL")
     request = urllib.request.Request(url, headers={"Accept-Encoding": "gzip", "User-Agent": "hdhomerun-to-xmltv/1.0"})
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
             charset = response.headers.get_content_charset() or "utf-8"
             return json.loads(read_response_body(response).decode(charset))
     except urllib.error.HTTPError as exc:
@@ -40,9 +41,10 @@ def fetch_json(url: str, timeout: int = DEFAULT_TIMEOUT) -> Any:
 
 
 def fetch_text(url: str, timeout: int = DEFAULT_TIMEOUT) -> str:
+    url = validate_silicondust_xmltv_url(url)
     request = urllib.request.Request(url, headers={"Accept-Encoding": "gzip", "User-Agent": "hdhomerun-to-xmltv/1.0"})
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
             charset = response.headers.get_content_charset() or "utf-8"
             return read_response_body(response).decode(charset)
     except urllib.error.HTTPError as exc:
@@ -72,19 +74,30 @@ def validate_local_http_url(url: str, label: str) -> str:
         raise RuntimeError(f"{label} must use a literal local IP address") from exc
 
     if not is_allowed_local_address(address):
-        raise RuntimeError(f"{label} must point to a private, link-local, or loopback address")
+        raise RuntimeError(f"{label} must point to a private or link-local address")
 
     return urllib.parse.urlunsplit(parsed)
 
 
 def is_allowed_local_address(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    if address.is_loopback or address.is_link_local:
+    if address.is_loopback:
+        return False
+    if address.is_link_local:
         return True
     if isinstance(address, ipaddress.IPv4Address):
         return any(address in network for network in ALLOWED_IPV4_NETWORKS)
     if isinstance(address, ipaddress.IPv6Address):
         return address in ipaddress.ip_network("fc00::/7")
     return False
+
+
+def validate_silicondust_xmltv_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme != "https" or parsed.hostname != "api.hdhomerun.com":
+        raise RuntimeError("XMLTV URL must point to https://api.hdhomerun.com")
+    if parsed.username or parsed.password:
+        raise RuntimeError("XMLTV URL must not include user info")
+    return urllib.parse.urlunsplit(parsed)
 
 
 def discover_device_url() -> str | None:
@@ -130,6 +143,10 @@ def build_xmltv_url(auth: str, request_paid_guide_window: bool = False) -> str:
 
 
 def validate_xmltv(xmltv: str) -> tuple[int, int]:
+    lowered = xmltv[:1024].lower()
+    if "<!doctype" in lowered or "<!entity" in lowered:
+        raise RuntimeError("SiliconDust XMLTV API returned XML with unsupported DTD or entity declarations")
+
     try:
         root = ET.fromstring(xmltv)
     except ET.ParseError as exc:

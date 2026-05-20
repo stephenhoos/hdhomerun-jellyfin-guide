@@ -11,7 +11,7 @@
                     <div class="sectionTitleContainer flex align-items-center">
                         <h2 class="sectionTitle">HDHomeRun Guide</h2>
                     </div>
-                    <div class="fieldDescription">Plugin UI build: 0.3.0.0-xmltv-only</div>
+                    <div class="fieldDescription">Plugin UI build: 0.3.1.0-xmltv-docs</div>
 
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="txtTunerAddress">Tuner IP or URL</label>
@@ -40,6 +40,12 @@
                         <span>Request paid 14-day XMLTV guide when available</span>
                     </label>
 
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="txtXmlTvAccountEmail">SiliconDust account email</label>
+                        <input is="emby-input" id="txtXmlTvAccountEmail" name="txtXmlTvAccountEmail" type="email" />
+                        <div class="fieldDescription">Optional. When set, the plugin uses SiliconDust's Email + DeviceID XMLTV access. DeviceID is read from the configured tuner.</div>
+                    </div>
+
                     <label class="checkboxContainer">
                         <input is="emby-checkbox" id="chkAutoConfigureLiveTv" name="chkAutoConfigureLiveTv" type="checkbox" />
                         <span>Update Jellyfin Live TV M3U/XMLTV paths after refresh</span>
@@ -67,7 +73,7 @@
                 const pluginId = 'dedaf64f-c6d3-4b51-b88e-64873ec088a5';
                 const rootId = 'hdhomerunGuideConfigPage';
                 const freeRefreshHours = 36;
-                const paidRefreshHours = 168;
+                const paidRefreshHours = 68;
 
                 function findPage(source) {
                     if (source && source.closest) {
@@ -144,10 +150,11 @@
                         configPage.querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
                         configPage.querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
                         configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked = config.RequestPaidXmlTvGuideData === true;
+                        configPage.querySelector('#txtXmlTvAccountEmail').value = config.XmlTvAccountEmail || '';
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
                         configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || defaultRefreshHours(configPage);
 
-                        const lines = ['Plugin UI build: 0.3.0.0-xmltv-only'];
+                        const lines = ['Plugin UI build: 0.3.1.0-xmltv-docs'];
                         if (config.LastRefreshUtc) {
                             lines.push('Last refresh: ' + config.LastRefreshUtc);
                         }
@@ -156,6 +163,11 @@
                         }
                         if (config.LastTunerCount) {
                             lines.push('Tuners: ' + config.LastTunerCount);
+                        }
+                        if (config.XmlTvAccountEmail) {
+                            lines.push('XMLTV access: Email + tuner DeviceID');
+                        } else {
+                            lines.push('XMLTV access: DeviceAuth');
                         }
                         if (config.LastGuidePath) {
                             lines.push('XMLTV: ' + config.LastGuidePath);
@@ -177,6 +189,7 @@
                         config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || defaultRefreshHours(configPage), 10);
                         config.SkipDisabledChannels = configPage.querySelector('#chkSkipDrm').checked;
                         config.RequestPaidXmlTvGuideData = configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked;
+                        config.XmlTvAccountEmail = configPage.querySelector('#txtXmlTvAccountEmail').value;
                         config.AutoConfigureLiveTv = configPage.querySelector('#chkAutoConfigureLiveTv').checked;
                         return ApiClient.updatePluginConfiguration(pluginId, config);
                     });

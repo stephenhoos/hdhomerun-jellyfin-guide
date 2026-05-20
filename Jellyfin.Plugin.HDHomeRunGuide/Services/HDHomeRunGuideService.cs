@@ -84,7 +84,12 @@ public sealed class HDHomeRunGuideService
             var discover = await _client.GetDiscoverInfoAsync(config.TunerAddress, cancellationToken).ConfigureAwait(false);
             var lineup = await _client.GetLineupAsync(discover, cancellationToken).ConfigureAwait(false);
             var result = await _writer.WriteXmlTvAsync(
-                await _xmlTvGuideService.GetXmlTvAsync(discover.DeviceAuth, config.RequestPaidXmlTvGuideData, cancellationToken).ConfigureAwait(false),
+                await _xmlTvGuideService.GetXmlTvAsync(
+                    discover.DeviceAuth,
+                    config.XmlTvAccountEmail,
+                    discover.DeviceId,
+                    config.RequestPaidXmlTvGuideData,
+                    cancellationToken).ConfigureAwait(false),
                 lineup,
                 plugin.DataFolderPath,
                 config.SkipDisabledChannels,
@@ -251,7 +256,7 @@ public sealed class HDHomeRunGuideService
     /// <returns>Refresh interval in hours.</returns>
     public static int GetEffectiveRefreshIntervalHours(PluginConfiguration configuration)
     {
-        var fallback = configuration.RequestPaidXmlTvGuideData ? 168 : 36;
+        var fallback = configuration.RequestPaidXmlTvGuideData ? 68 : 36;
         var hours = configuration.RefreshIntervalHours > 0 ? configuration.RefreshIntervalHours : fallback;
         return Math.Clamp(hours, 1, 168);
     }

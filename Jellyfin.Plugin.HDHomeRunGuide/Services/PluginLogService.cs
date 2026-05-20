@@ -24,7 +24,7 @@ public sealed class PluginLogService
     public PluginLogService(ILogger<PluginLogService> logger)
     {
         _logger = logger;
-        Info("HDHomeRun Guide diagnostics initialized. Build=0.3.0.0-xmltv-only");
+        Info("HDHomeRun Guide diagnostics initialized. Build=0.3.1.0-xmltv-docs");
     }
 
     /// <summary>
@@ -112,7 +112,13 @@ public sealed class PluginLogService
 
     private static string RedactSecrets(string value)
     {
-        var index = value.IndexOf("DeviceAuth=", StringComparison.OrdinalIgnoreCase);
+        return RedactQueryValue(RedactQueryValue(RedactQueryValue(value, "DeviceAuth"), "Email"), "DeviceIDs");
+    }
+
+    private static string RedactQueryValue(string value, string key)
+    {
+        var marker = key + "=";
+        var index = value.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
         if (index < 0)
         {
             return value;
@@ -120,7 +126,7 @@ public sealed class PluginLogService
 
         var end = value.IndexOf('&', index);
         return end < 0
-            ? value[..index] + "DeviceAuth=REDACTED"
-            : value[..index] + "DeviceAuth=REDACTED" + value[end..];
+            ? value[..index] + key + "=REDACTED"
+            : value[..index] + key + "=REDACTED" + value[end..];
     }
 }
