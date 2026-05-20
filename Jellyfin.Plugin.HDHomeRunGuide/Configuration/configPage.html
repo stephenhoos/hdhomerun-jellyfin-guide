@@ -11,7 +11,7 @@
                     <div class="sectionTitleContainer flex align-items-center">
                         <h2 class="sectionTitle">HDHomeRun Guide</h2>
                     </div>
-                    <div class="fieldDescription">Plugin UI build: 0.1.2.0-scoped-ui</div>
+                    <div class="fieldDescription">Plugin UI build: 0.1.3.0-direct-buttons</div>
 
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="txtTunerAddress">Tuner IP or URL</label>
@@ -46,19 +46,19 @@
                     </label>
 
                     <div class="button-submit-section">
-                        <button is="emby-button" type="button" class="raised button-submit block" id="btnAddMyTuners">
+                        <button is="emby-button" type="button" class="raised button-submit block" id="btnAddMyTuners" onclick="return window.hdhomerunGuideConfig.addMyTuners(this);">
                             <span>Add My Tuners</span>
                         </button>
-                        <button is="emby-button" type="button" class="raised button-submit block" id="btnScan">
+                        <button is="emby-button" type="button" class="raised button-submit block" id="btnScan" onclick="return window.hdhomerunGuideConfig.findTuners(this);">
                             <span>Find HDHomeRun Tuners</span>
                         </button>
-                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnTest">
+                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnTest" onclick="return window.hdhomerunGuideConfig.testTuner(this);">
                             <span>Test Tuner</span>
                         </button>
-                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnRefresh">
+                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnRefresh" onclick="return window.hdhomerunGuideConfig.refreshNow(this);">
                             <span>Refresh Now</span>
                         </button>
-                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnLogs">
+                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnLogs" onclick="return window.hdhomerunGuideConfig.viewLogs(this);">
                             <span>View Logs</span>
                         </button>
                         <button is="emby-button" type="submit" class="raised button-submit block">
@@ -68,6 +68,11 @@
 
                     <div id="hdhomerunGuideStatus" class="fieldDescription" style="margin-top:2em;white-space:pre-wrap;"></div>
                     <div id="hdhomerunGuideResults" style="margin-top:1em;"></div>
+                    <div class="fieldDescription" style="margin-top:1em;">
+                        <a is="emby-linkbutton" href="/HDHomeRunGuide/Discover" target="_blank">Open discovery JSON</a>
+                        <span> | </span>
+                        <a is="emby-linkbutton" href="/HDHomeRunGuide/Logs" target="_blank">Open raw plugin logs</a>
+                    </div>
                 </form>
             </div>
         </div>
@@ -142,7 +147,7 @@
                         configPage.querySelector('#chkUseXmlTvGuideData').checked = config.UseXmlTvGuideData === true;
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
 
-                        const lines = ['Plugin UI build: 0.1.2.0-scoped-ui'];
+                        const lines = ['Plugin UI build: 0.1.3.0-direct-buttons'];
                         if (config.LastRefreshUtc) {
                             lines.push('Last refresh: ' + config.LastRefreshUtc);
                         }
@@ -280,10 +285,32 @@
                     }
                 }
 
-                if (!window.hdhomerunGuideConfigBound) {
-                    window.hdhomerunGuideConfigBound = true;
+                window.hdhomerunGuideConfig = {
+                    findTuners: function (button) {
+                        clickButton({ target: button });
+                        return false;
+                    },
+                    addMyTuners: function (button) {
+                        clickButton({ target: button });
+                        return false;
+                    },
+                    testTuner: function (button) {
+                        clickButton({ target: button });
+                        return false;
+                    },
+                    refreshNow: function (button) {
+                        clickButton({ target: button });
+                        return false;
+                    },
+                    viewLogs: function (button) {
+                        clickButton({ target: button });
+                        return false;
+                    }
+                };
+
+                if (!window.hdhomerunGuideConfigDelegatesBound) {
+                    window.hdhomerunGuideConfigDelegatesBound = true;
                     document.addEventListener('submit', submitForm);
-                    document.addEventListener('click', clickButton);
                     document.addEventListener('viewshow', function (event) {
                         if (event.target && event.target.id === rootId) {
                             loadConfig(event.target);

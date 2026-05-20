@@ -65,8 +65,8 @@ Jellyfin.Plugin.HDHomeRunGuide/bin/Release/net9.0/
 Typical plugin directories:
 
 ```text
-Linux: /var/lib/jellyfin/plugins/HDHomeRun Guide_0.1.2.0/
-macOS: ~/Library/Application Support/jellyfin/plugins/HDHomeRun Guide_0.1.2.0/
+Linux: /var/lib/jellyfin/plugins/HDHomeRun Guide_0.1.3.0/
+macOS: ~/Library/Application Support/jellyfin/plugins/HDHomeRun Guide_0.1.3.0/
 ```
 
 ## Configure
