@@ -19,10 +19,12 @@ namespace Jellyfin.Plugin.HDHomeRunGuide.Services;
 /// </summary>
 public sealed class LiveTvConfigurator
 {
-    private const string TunerType = "m3u";
+    private const string TunerType = "hdhomerun";
+    private const string LegacyTunerType = "m3u";
     private const string ListingsType = "xmltv";
-    private const string FriendlyNamePrefix = "HDHomeRun Guide M3U";
+    private const string FriendlyNamePrefix = "HDHomeRun Guide";
     private const string LegacyFriendlyName = "HDHomeRun M3U";
+    private const string LegacyFriendlyNamePrefix = "HDHomeRun Guide M3U";
     private const string DefaultTunerHostId = "dedaf64fc6d34b51b88e64873ec088a5";
     private const string DefaultListingsProviderId = "c832ab9aa3354373aeecd9d80c483a7c";
 
@@ -73,14 +75,14 @@ public sealed class LiveTvConfigurator
         CancellationToken cancellationToken)
     {
         var liveTvIds = FindExistingLiveTvIds(result);
-        var tunerHostId = FirstNotEmpty(configuration.LiveTvTunerHostId, liveTvIds.TunerHostId, DefaultTunerHostId);
-        var listingsProviderId = FirstNotEmpty(configuration.LiveTvListingProviderId, liveTvIds.ListingsProviderId, DefaultListingsProviderId);
+        var tunerHostId = FirstNotEmpty(liveTvIds.TunerHostId, configuration.LiveTvTunerHostId, DefaultTunerHostId);
+        var listingsProviderId = FirstNotEmpty(liveTvIds.ListingsProviderId, configuration.LiveTvListingProviderId, DefaultListingsProviderId);
 
         var tunerInfo = new TunerHostInfo
         {
             Id = tunerHostId,
             Type = TunerType,
-            Url = result.M3uPath,
+            Url = HDHomeRunClient.NormalizeBaseUri(configuration.TunerAddress).ToString(),
             FriendlyName = BuildFriendlyName(discover.TunerCount),
             ImportFavoritesOnly = false,
             TunerCount = discover.TunerCount > 0 ? discover.TunerCount : 1,
@@ -107,7 +109,7 @@ public sealed class LiveTvConfigurator
         configuration.LiveTvListingProviderId = listingsProviderId;
 
         _logger.LogInformation(
-            "Updated Jellyfin Live TV M3U tuner {TunerHostId} and XMLTV provider {ListingsProviderId}",
+            "Updated Jellyfin Live TV HDHomeRun tuner {TunerHostId} and XMLTV provider {ListingsProviderId}",
             tunerHostId,
             listingsProviderId);
 
@@ -166,7 +168,7 @@ public sealed class LiveTvConfigurator
             var tunerHost = document
                 .Descendants("TunerHostInfo")
                 .FirstOrDefault(item =>
-                    string.Equals((string?)item.Element("Type"), TunerType, StringComparison.OrdinalIgnoreCase)
+                    IsManagedTunerType((string?)item.Element("Type"))
                     && (ContainsHdhomerunGuidePath((string?)item.Element("Url"))
                         || IsManagedFriendlyName((string?)item.Element("FriendlyName"))
                         || string.Equals((string?)item.Element("FriendlyName"), LegacyFriendlyName, StringComparison.OrdinalIgnoreCase)));
@@ -222,7 +224,14 @@ public sealed class LiveTvConfigurator
     private static bool IsManagedFriendlyName(string? value)
     {
         return !string.IsNullOrWhiteSpace(value)
-            && value.StartsWith(FriendlyNamePrefix, StringComparison.OrdinalIgnoreCase);
+            && (value.StartsWith(FriendlyNamePrefix, StringComparison.OrdinalIgnoreCase)
+                || value.StartsWith(LegacyFriendlyNamePrefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsManagedTunerType(string? value)
+    {
+        return string.Equals(value, TunerType, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, LegacyTunerType, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsHdhomerunTuner(TunerHostInfo tuner)

@@ -11,7 +11,7 @@
                     <div class="sectionTitleContainer flex align-items-center">
                         <h2 class="sectionTitle">HDHomeRun Guide</h2>
                     </div>
-                    <div class="fieldDescription">Plugin UI build: 0.1.4.0-simplified-ui</div>
+                    <div class="fieldDescription">Plugin UI build: 0.1.5.0-hdhomerun-tuner</div>
 
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="txtTunerAddress">Tuner IP or URL</label>
@@ -136,7 +136,7 @@
                         configPage.querySelector('#chkUseXmlTvGuideData').checked = config.UseXmlTvGuideData === true;
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
 
-                        const lines = ['Plugin UI build: 0.1.4.0-simplified-ui'];
+                        const lines = ['Plugin UI build: 0.1.5.0-hdhomerun-tuner'];
                         if (config.LastRefreshUtc) {
                             lines.push('Last refresh: ' + config.LastRefreshUtc);
                         }
