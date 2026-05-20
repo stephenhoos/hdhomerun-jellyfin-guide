@@ -230,13 +230,17 @@ public sealed class FlexibleBooleanJsonConverter : JsonConverter<bool>
         {
             JsonTokenType.True => true,
             JsonTokenType.False => false,
-            JsonTokenType.Number => reader.GetInt32() != 0,
-            JsonTokenType.String => bool.TryParse(reader.GetString(), out var b)
-                ? b
-                : int.TryParse(reader.GetString(), out var i) && i != 0,
+            JsonTokenType.Number => reader.TryGetInt32(out var i) && i == 1,
+            JsonTokenType.String => ReadStringValue(reader.GetString()),
             JsonTokenType.Null => false,
             _ => false
         };
+    }
+
+    private static bool ReadStringValue(string? value)
+    {
+        return string.Equals(value, bool.TrueString, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "1", StringComparison.Ordinal);
     }
 
     /// <summary>
