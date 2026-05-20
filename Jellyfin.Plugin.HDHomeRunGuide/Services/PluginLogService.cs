@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.HDHomeRunGuide.Services;
@@ -11,6 +13,7 @@ namespace Jellyfin.Plugin.HDHomeRunGuide.Services;
 public sealed class PluginLogService
 {
     private const int MaxEntries = 250;
+    private const string LogFileName = "hdhomerun-guide-plugin.log";
     private readonly ConcurrentQueue<string> _entries = new();
     private readonly ILogger<PluginLogService> _logger;
 
@@ -21,6 +24,7 @@ public sealed class PluginLogService
     public PluginLogService(ILogger<PluginLogService> logger)
     {
         _logger = logger;
+        Info("HDHomeRun Guide diagnostics initialized. Build=0.1.1.0-discovery-logs");
     }
 
     /// <summary>
@@ -61,15 +65,49 @@ public sealed class PluginLogService
     /// <returns>Recent diagnostic lines.</returns>
     public IReadOnlyList<string> GetRecent()
     {
+        var logPath = GetLogPath();
+        if (!string.IsNullOrWhiteSpace(logPath) && File.Exists(logPath))
+        {
+            return File.ReadLines(logPath).TakeLast(MaxEntries).ToList();
+        }
+
         return _entries.ToArray();
     }
 
     private void Add(string level, string message)
     {
-        _entries.Enqueue($"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz} [{level}] {RedactSecrets(message)}");
+        var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz} [{level}] {RedactSecrets(message)}";
+        _entries.Enqueue(line);
         while (_entries.Count > MaxEntries && _entries.TryDequeue(out _))
         {
         }
+
+        var logPath = GetLogPath();
+        if (string.IsNullOrWhiteSpace(logPath))
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            File.AppendAllText(logPath, line + Environment.NewLine);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogWarning(ex, "Could not write HDHomeRun Guide plugin log");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Could not write HDHomeRun Guide plugin log");
+        }
+    }
+
+    private static string GetLogPath()
+    {
+        return Plugin.Instance is null
+            ? string.Empty
+            : Path.Combine(Plugin.Instance.DataFolderPath, LogFileName);
     }
 
     private static string RedactSecrets(string value)
