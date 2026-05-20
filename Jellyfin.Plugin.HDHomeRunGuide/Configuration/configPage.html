@@ -11,7 +11,7 @@
                     <div class="sectionTitleContainer flex align-items-center">
                         <h2 class="sectionTitle">HDHomeRun Guide</h2>
                     </div>
-                    <div class="fieldDescription">Plugin UI build: 0.1.5.0-hdhomerun-tuner</div>
+                    <div class="fieldDescription">Plugin UI build: 0.1.6.0-clean-setup</div>
 
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="txtTunerAddress">Tuner IP or URL</label>
@@ -48,9 +48,6 @@
                     <div class="button-submit-section">
                         <button is="emby-button" type="button" class="raised button-submit block" id="btnAddMyTuners" onclick="return window.hdhomerunGuideConfig.addMyTuners(this);">
                             <span>Find and Add My Tuners</span>
-                        </button>
-                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnTest" onclick="return window.hdhomerunGuideConfig.testTuner(this);">
-                            <span>Test Tuner</span>
                         </button>
                         <button is="emby-button" type="button" class="raised button-cancel block" id="btnRefresh" onclick="return window.hdhomerunGuideConfig.refreshNow(this);">
                             <span>Refresh Now</span>
@@ -136,7 +133,7 @@
                         configPage.querySelector('#chkUseXmlTvGuideData').checked = config.UseXmlTvGuideData === true;
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
 
-                        const lines = ['Plugin UI build: 0.1.5.0-hdhomerun-tuner'];
+                        const lines = ['Plugin UI build: 0.1.6.0-clean-setup'];
                         if (config.LastRefreshUtc) {
                             lines.push('Last refresh: ' + config.LastRefreshUtc);
                         }
@@ -219,19 +216,6 @@
                         }).finally(Dashboard.hideLoadingMsg);
                     }
 
-                    if (button.id === 'btnTest') {
-                        const address = configPage.querySelector('#txtTunerAddress').value;
-                        Dashboard.showLoadingMsg();
-                        ApiClient.ajax({
-                            type: 'GET',
-                            url: ApiClient.getUrl('HDHomeRunGuide/Test', { address: address })
-                        }).then(function (tuner) {
-                            setStatus(configPage, 'Found ' + valueOf(tuner, 'friendlyName', 'FriendlyName') + ' ' + valueOf(tuner, 'deviceId', 'DeviceId') + ' at ' + valueOf(tuner, 'address', 'Address') + '.');
-                        }).catch(function (err) {
-                            setStatus(configPage, problemMessage(err, 'Tuner test failed.'));
-                        }).finally(Dashboard.hideLoadingMsg);
-                    }
-
                     if (button.id === 'btnRefresh') {
                         Dashboard.showLoadingMsg();
                         saveConfig(configPage).then(function () {
@@ -250,10 +234,6 @@
 
                 window.hdhomerunGuideConfig = {
                     addMyTuners: function (button) {
-                        clickButton({ target: button });
-                        return false;
-                    },
-                    testTuner: function (button) {
                         clickButton({ target: button });
                         return false;
                     },

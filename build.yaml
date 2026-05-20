@@ -1,7 +1,7 @@
 ---
 name: "HDHomeRun Guide"
 guid: "dedaf64f-c6d3-4b51-b88e-64873ec088a5"
-version: "0.1.5.0"
+version: "0.1.6.0"
 targetAbi: "10.9.0.0"
 framework: "net9.0"
 overview: "Server-side HDHomeRun guide refresh for Jellyfin"
@@ -13,5 +13,5 @@ owner: "community"
 artifacts:
 - "Jellyfin.Plugin.HDHomeRunGuide.dll"
 changelog: >
-  Configures Jellyfin Live TV with the actual HDHomeRun network tuner while
-  keeping the generated XMLTV guide provider.
+  Removes the redundant Test Tuner button from the setup UI and keeps the
+  Find and Add My Tuners flow as the primary setup action.
