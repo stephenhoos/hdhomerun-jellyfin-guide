@@ -4,16 +4,19 @@ guid: "dedaf64f-c6d3-4b51-b88e-64873ec088a5"
 version: "0.3.0.0"
 targetAbi: "10.9.0.0"
 framework: "net9.0"
-overview: "Server-side HDHomeRun guide refresh for Jellyfin"
+overview: "Server-side HDHomeRun XMLTV guide refresh for Jellyfin"
 description: >
   Downloads SiliconDust HDHomeRun XMLTV data with the tuner DeviceAuth token
   and writes Jellyfin-compatible XMLTV and M3U files from a scheduled server task.
+  The plugin uses the official XMLTV endpoint instead of the render-oriented
+  guide API at SiliconDust/HDHomeRun's request.
 category: "Live TV"
 owner: "Stephen Hoos"
 artifacts:
 - "Jellyfin.Plugin.HDHomeRunGuide.dll"
 changelog: >
-  Migrates guide retrieval to SiliconDust's XMLTV API and removes the
-  render-oriented guide API reconstruction path. Reads fresh DeviceAuth for
-  each refresh, can explicitly request the paid 14-day XMLTV window, accepts
-  compressed XMLTV responses, and randomizes automatic refresh timing.
+  Migrates guide retrieval to SiliconDust's official XMLTV API at
+  SiliconDust/HDHomeRun's request and removes the render-oriented guide API
+  reconstruction path. Reads fresh DeviceAuth for each refresh, can explicitly
+  request the paid 14-day XMLTV window, accepts compressed XMLTV responses, and
+  randomizes automatic refresh timing.

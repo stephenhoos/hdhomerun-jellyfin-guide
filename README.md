@@ -1,12 +1,23 @@
 # HDHomeRun Guide for Jellyfin
 
-Server-side Jellyfin plugin that keeps Live TV guide data fresh for SiliconDust HDHomeRun tuners.
+Server-side Jellyfin plugin that keeps Live TV XMLTV guide data fresh for
+SiliconDust HDHomeRun tuners.
 
-The plugin reads `DeviceAuth` from your HDHomeRun tuner, generates Jellyfin-compatible Live TV files, updates Jellyfin's M3U/XMLTV configuration, clears stale XMLTV cache entries, and triggers Jellyfin's guide import automatically.
+The plugin reads fresh `DeviceAuth` from your HDHomeRun tuner, downloads
+SiliconDust's official XMLTV feed, writes Jellyfin-compatible Live TV files,
+updates Jellyfin's M3U/XMLTV configuration, clears stale XMLTV cache entries,
+and triggers Jellyfin's guide import automatically.
 
 ## Why this exists
 
-Jellyfin's native HDHomeRun guide flow can be unreliable depending on tuner, subscription, and cache state. This plugin keeps the setup inside Jellyfin while using SiliconDust's official XMLTV API directly.
+Jellyfin's native HDHomeRun guide flow can be unreliable depending on tuner,
+subscription, and cache state. This plugin keeps the setup inside Jellyfin while
+using SiliconDust's official XMLTV API directly.
+
+At SiliconDust/HDHomeRun's request, the plugin was changed to stop using the
+render-oriented `/api/guide` endpoint and now uses the XMLTV endpoint as its only
+guide source. The plugin is now an XMLTV cache and Jellyfin Live TV configurator,
+not a guide reconstruction layer.
 
 The guide source is always:
 
@@ -14,13 +25,20 @@ The guide source is always:
 https://api.hdhomerun.com/api/xmltv?DeviceAuth=...
 ```
 
-SiliconDust has indicated this XMLTV endpoint now supports free guide access and automatically provides the DVR/subscription guide depth when the tuner token is entitled to it.
+SiliconDust has indicated this XMLTV endpoint now supports free guide access and
+automatically provides the DVR/subscription guide depth when the tuner token is
+entitled to it.
 
 The public SiliconDust XMLTV documentation is here:
 
 https://github.com/Silicondust/documentation/wiki/XMLTV-Guide-Data
 
-That page documents the XMLTV URL, gzip requirement, fresh `DeviceAuth` requirement, the newer `Email` + `DeviceIDs` access option, and randomized scheduling guidance. The plugin uses fresh `DeviceAuth` from the tuner on every refresh so it does not need to store SiliconDust account details. Public documentation may lag Nick's newer note that free 3-day XMLTV access is available without a DVR account.
+That page documents the XMLTV URL, gzip requirement, fresh `DeviceAuth`
+requirement, the newer `Email` + `DeviceIDs` access option, and randomized
+scheduling guidance. The plugin uses fresh `DeviceAuth` from the tuner on every
+refresh so it does not need to store SiliconDust account details. Public
+documentation may lag Nick's newer note that free 3-day XMLTV access is
+available without a DVR account.
 
 ## Features
 
@@ -29,7 +47,7 @@ That page documents the XMLTV URL, gzip requirement, fresh `DeviceAuth` requirem
 - Optional subnet scan fallback when Jellyfin discovery returns no devices.
 - Automatic background refresh on a randomized configurable interval.
 - Immediate refresh after saving plugin configuration.
-- XMLTV-only guide retrieval from SiliconDust.
+- XMLTV-only guide retrieval from SiliconDust, with all old `/api/guide` logic removed.
 - Optional paid guide request flag that appends `Duration=14`; SiliconDust may still decide the returned window from tuner/account entitlement.
 - Automatic Jellyfin Live TV M3U/XMLTV path management.
 - Explicit Jellyfin channel mappings for M3U/XMLTV imports.
@@ -63,6 +81,12 @@ Build output is written under:
 Jellyfin.Plugin.HDHomeRunGuide/bin/Release/net9.0/
 ```
 
+Current plugin version:
+
+```text
+0.3.0.0
+```
+
 ## Install
 
 1. Create a plugin folder under your Jellyfin plugin directory.
@@ -91,6 +115,8 @@ In Jellyfin:
 6. Save.
 
 Saving triggers an immediate refresh. Future refreshes run in the background.
+Jellyfin also exposes a manual scheduled task named **Refresh HDHomeRun Guide**
+for admins who want to run the XMLTV import by hand.
 
 You can still enter a tuner IP or URL manually, such as `192.168.1.4`, and use **Find HDHomeRun Tuners** for troubleshooting. Discovery is deduplicated by physical device, so a two-tuner HDHomeRun appears as one device with two available tuners. If no scan subnet is configured, the plugin infers private LAN `/24` ranges from the Jellyfin server network interfaces and never scans `127.0.0.1`.
 

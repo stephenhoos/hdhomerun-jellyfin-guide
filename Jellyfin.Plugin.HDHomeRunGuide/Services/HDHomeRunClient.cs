@@ -38,7 +38,7 @@ public sealed class HDHomeRunClient
         _logger = logger;
         if (!HttpClient.DefaultRequestHeaders.UserAgent.Any())
         {
-            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.1");
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.0");
         }
     }
 

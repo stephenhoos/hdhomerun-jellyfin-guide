@@ -33,7 +33,7 @@ public sealed class XmlTvGuideService
         _logger = logger;
         if (!HttpClient.DefaultRequestHeaders.UserAgent.Any())
         {
-            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.2");
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.0");
         }
     }
 
