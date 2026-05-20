@@ -11,7 +11,7 @@
                     <div class="sectionTitleContainer flex align-items-center">
                         <h2 class="sectionTitle">HDHomeRun Guide</h2>
                     </div>
-                    <div class="fieldDescription">Plugin UI build: 0.1.1.0-discovery-logs</div>
+                    <div class="fieldDescription">Plugin UI build: 0.1.2.0-scoped-ui</div>
 
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="txtTunerAddress">Tuner IP or URL</label>
@@ -74,13 +74,21 @@
         <script type="text/javascript">
             (function () {
                 const pluginId = 'dedaf64f-c6d3-4b51-b88e-64873ec088a5';
+                const rootId = 'hdhomerunGuideConfigPage';
 
-                function page() {
-                    return document.querySelector('#hdhomerunGuideConfigPage');
+                function findPage(source) {
+                    if (source && source.closest) {
+                        const scopedPage = source.closest('#' + rootId);
+                        if (scopedPage) {
+                            return scopedPage;
+                        }
+                    }
+
+                    return document.querySelector('#' + rootId);
                 }
 
-                function setStatus(message) {
-                    page().querySelector('#hdhomerunGuideStatus').textContent = message || '';
+                function setStatus(configPage, message) {
+                    configPage.querySelector('#hdhomerunGuideStatus').textContent = message || '';
                 }
 
                 function valueOf(item, lowerName, upperName) {
@@ -95,8 +103,8 @@
                     return err.message || err.Message || err.detail || err.Detail || err.title || err.Title || fallback;
                 }
 
-                function renderTuners(tuners) {
-                    const container = page().querySelector('#hdhomerunGuideResults');
+                function renderTuners(configPage, tuners) {
+                    const container = configPage.querySelector('#hdhomerunGuideResults');
                     container.innerHTML = '';
                     if (!tuners || !tuners.length) {
                         container.textContent = 'No HDHomeRun tuners found.';
@@ -113,24 +121,28 @@
                         button.className = 'raised button-cancel block';
                         button.textContent = friendlyName + ' ' + address + ' (' + tunerCount + ' tuners)';
                         button.addEventListener('click', function () {
-                            page().querySelector('#txtTunerAddress').value = address;
-                            setStatus('Selected ' + address + '. Save to refresh now and enable automatic updates.');
+                            configPage.querySelector('#txtTunerAddress').value = address;
+                            setStatus(configPage, 'Selected ' + address + '. Save to refresh now and enable automatic updates.');
                         });
                         container.appendChild(button);
                     });
                 }
 
-                function loadConfig() {
-                    Dashboard.showLoadingMsg();
-                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                        page().querySelector('#txtTunerAddress').value = config.TunerAddress || '';
-                        page().querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
-                        page().querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 12;
-                        page().querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
-                        page().querySelector('#chkUseXmlTvGuideData').checked = config.UseXmlTvGuideData === true;
-                        page().querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
+                function loadConfig(configPage) {
+                    if (!configPage) {
+                        return Promise.resolve();
+                    }
 
-                        const lines = [];
+                    Dashboard.showLoadingMsg();
+                    return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        configPage.querySelector('#txtTunerAddress').value = config.TunerAddress || '';
+                        configPage.querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
+                        configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 12;
+                        configPage.querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
+                        configPage.querySelector('#chkUseXmlTvGuideData').checked = config.UseXmlTvGuideData === true;
+                        configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
+
+                        const lines = ['Plugin UI build: 0.1.2.0-scoped-ui'];
                         if (config.LastRefreshUtc) {
                             lines.push('Last refresh: ' + config.LastRefreshUtc);
                         }
@@ -146,108 +158,140 @@
                         if (config.LastError) {
                             lines.push('Last error: ' + config.LastError);
                         }
-                        setStatus(lines.join('\n'));
+                        setStatus(configPage, lines.join('\n'));
                     }).finally(Dashboard.hideLoadingMsg);
                 }
 
-                function saveConfig() {
+                function saveConfig(configPage) {
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                        config.TunerAddress = page().querySelector('#txtTunerAddress').value;
-                        config.ScanSubnet = page().querySelector('#txtScanSubnet').value;
-                        config.RefreshIntervalHours = parseInt(page().querySelector('#txtRefreshHours').value || '12', 10);
-                        config.SkipDisabledChannels = page().querySelector('#chkSkipDrm').checked;
-                        config.UseXmlTvGuideData = page().querySelector('#chkUseXmlTvGuideData').checked;
-                        config.AutoConfigureLiveTv = page().querySelector('#chkAutoConfigureLiveTv').checked;
+                        config.TunerAddress = configPage.querySelector('#txtTunerAddress').value;
+                        config.ScanSubnet = configPage.querySelector('#txtScanSubnet').value;
+                        config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || '12', 10);
+                        config.SkipDisabledChannels = configPage.querySelector('#chkSkipDrm').checked;
+                        config.UseXmlTvGuideData = configPage.querySelector('#chkUseXmlTvGuideData').checked;
+                        config.AutoConfigureLiveTv = configPage.querySelector('#chkAutoConfigureLiveTv').checked;
                         return ApiClient.updatePluginConfiguration(pluginId, config);
                     });
                 }
 
-                page().addEventListener('viewshow', loadConfig);
+                function submitForm(event) {
+                    const form = event.target.closest && event.target.closest('#hdhomerunGuideConfigForm');
+                    if (!form) {
+                        return;
+                    }
 
-                page().querySelector('#hdhomerunGuideConfigForm').addEventListener('submit', function (event) {
                     event.preventDefault();
+                    const configPage = findPage(form);
                     Dashboard.showLoadingMsg();
-                    saveConfig().then(function (result) {
+                    saveConfig(configPage).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
-                        setStatus('Configuration saved. Refreshing guide data now; future updates will run automatically.');
+                        setStatus(configPage, 'Configuration saved. Refreshing guide data now; future updates will run automatically.');
                         return ApiClient.ajax({
                             type: 'POST',
                             url: ApiClient.getUrl('HDHomeRunGuide/Refresh')
                         });
                     }).then(function (result) {
-                        setStatus('Refresh complete.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
-                        loadConfig();
+                        setStatus(configPage, 'Refresh complete.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
+                        loadConfig(configPage);
                     }).catch(function (err) {
-                        setStatus(problemMessage(err, 'Configuration saved, but the automatic refresh failed.'));
+                        setStatus(configPage, problemMessage(err, 'Configuration saved, but the automatic refresh failed.'));
                     }).finally(Dashboard.hideLoadingMsg);
-                });
+                }
 
-                page().querySelector('#btnScan').addEventListener('click', function () {
-                    const subnet = page().querySelector('#txtScanSubnet').value;
-                    Dashboard.showLoadingMsg();
-                    setStatus('Finding HDHomeRun tuners with Jellyfin discovery...');
-                    ApiClient.ajax({
-                        type: 'GET',
-                        url: ApiClient.getUrl('HDHomeRunGuide/Discover', { subnet: subnet })
-                    }).then(renderTuners).catch(function (err) {
-                        setStatus(problemMessage(err, 'HDHomeRun discovery failed.'));
-                    }).finally(Dashboard.hideLoadingMsg);
-                });
+                function clickButton(event) {
+                    const button = event.target.closest && event.target.closest('button');
+                    if (!button) {
+                        return;
+                    }
 
-                page().querySelector('#btnAddMyTuners').addEventListener('click', function () {
-                    Dashboard.showLoadingMsg();
-                    setStatus('Finding HDHomeRun tuners and configuring Live TV...');
-                    saveConfig().then(function () {
-                        return ApiClient.ajax({
-                            type: 'POST',
-                            url: ApiClient.getUrl('HDHomeRunGuide/AddMyTuners')
-                        });
-                    }).then(function (result) {
-                        setStatus('Tuners added and guide refreshed.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
-                        loadConfig();
-                    }).catch(function (err) {
-                        setStatus(problemMessage(err, 'Could not add HDHomeRun tuners.'));
-                    }).finally(Dashboard.hideLoadingMsg);
-                });
+                    const configPage = findPage(button);
+                    if (!configPage || configPage.id !== rootId) {
+                        return;
+                    }
 
-                page().querySelector('#btnTest').addEventListener('click', function () {
-                    const address = page().querySelector('#txtTunerAddress').value;
-                    Dashboard.showLoadingMsg();
-                    ApiClient.ajax({
-                        type: 'GET',
-                        url: ApiClient.getUrl('HDHomeRunGuide/Test', { address: address })
-                    }).then(function (tuner) {
-                        setStatus('Found ' + valueOf(tuner, 'friendlyName', 'FriendlyName') + ' ' + valueOf(tuner, 'deviceId', 'DeviceId') + ' at ' + valueOf(tuner, 'address', 'Address') + '.');
-                    }).catch(function (err) {
-                        setStatus(problemMessage(err, 'Tuner test failed.'));
-                    }).finally(Dashboard.hideLoadingMsg);
-                });
+                    if (button.id === 'btnScan') {
+                        const subnet = configPage.querySelector('#txtScanSubnet').value;
+                        Dashboard.showLoadingMsg();
+                        setStatus(configPage, 'Finding HDHomeRun tuners with Jellyfin discovery...');
+                        ApiClient.ajax({
+                            type: 'GET',
+                            url: ApiClient.getUrl('HDHomeRunGuide/Discover', { subnet: subnet })
+                        }).then(function (tuners) {
+                            renderTuners(configPage, tuners);
+                            setStatus(configPage, tuners && tuners.length ? 'Found ' + tuners.length + ' HDHomeRun device(s).' : 'No HDHomeRun tuners found.');
+                        }).catch(function (err) {
+                            setStatus(configPage, problemMessage(err, 'HDHomeRun discovery failed.'));
+                        }).finally(Dashboard.hideLoadingMsg);
+                    }
 
-                page().querySelector('#btnRefresh').addEventListener('click', function () {
-                    Dashboard.showLoadingMsg();
-                    saveConfig().then(function () {
-                        return ApiClient.ajax({
-                            type: 'POST',
-                            url: ApiClient.getUrl('HDHomeRunGuide/Refresh')
-                        });
-                    }).then(function (result) {
-                        setStatus('Refresh complete.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
-                    }).catch(function (err) {
-                        setStatus(problemMessage(err, 'Refresh failed.'));
-                    }).finally(Dashboard.hideLoadingMsg);
-                });
+                    if (button.id === 'btnAddMyTuners') {
+                        Dashboard.showLoadingMsg();
+                        setStatus(configPage, 'Finding HDHomeRun tuners and configuring Live TV...');
+                        saveConfig(configPage).then(function () {
+                            return ApiClient.ajax({
+                                type: 'POST',
+                                url: ApiClient.getUrl('HDHomeRunGuide/AddMyTuners')
+                            });
+                        }).then(function (result) {
+                            setStatus(configPage, 'Tuners added and guide refreshed.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
+                            loadConfig(configPage);
+                        }).catch(function (err) {
+                            setStatus(configPage, problemMessage(err, 'Could not add HDHomeRun tuners.'));
+                        }).finally(Dashboard.hideLoadingMsg);
+                    }
 
-                page().querySelector('#btnLogs').addEventListener('click', function () {
-                    Dashboard.showLoadingMsg();
-                    ApiClient.ajax({
-                        type: 'GET',
-                        url: ApiClient.getUrl('HDHomeRunGuide/Logs')
-                    }).then(function (logs) {
-                        setStatus(logs && logs.length ? logs.join('\n') : 'No HDHomeRun Guide plugin logs recorded yet.');
-                    }).catch(function (err) {
-                        setStatus(problemMessage(err, 'Could not load plugin logs.'));
-                    }).finally(Dashboard.hideLoadingMsg);
-                });
+                    if (button.id === 'btnTest') {
+                        const address = configPage.querySelector('#txtTunerAddress').value;
+                        Dashboard.showLoadingMsg();
+                        ApiClient.ajax({
+                            type: 'GET',
+                            url: ApiClient.getUrl('HDHomeRunGuide/Test', { address: address })
+                        }).then(function (tuner) {
+                            setStatus(configPage, 'Found ' + valueOf(tuner, 'friendlyName', 'FriendlyName') + ' ' + valueOf(tuner, 'deviceId', 'DeviceId') + ' at ' + valueOf(tuner, 'address', 'Address') + '.');
+                        }).catch(function (err) {
+                            setStatus(configPage, problemMessage(err, 'Tuner test failed.'));
+                        }).finally(Dashboard.hideLoadingMsg);
+                    }
+
+                    if (button.id === 'btnRefresh') {
+                        Dashboard.showLoadingMsg();
+                        saveConfig(configPage).then(function () {
+                            return ApiClient.ajax({
+                                type: 'POST',
+                                url: ApiClient.getUrl('HDHomeRunGuide/Refresh')
+                            });
+                        }).then(function (result) {
+                            setStatus(configPage, 'Refresh complete.\nSource: ' + valueOf(result, 'guideSource', 'GuideSource') + '\nTuners: ' + valueOf(result, 'tunerCount', 'TunerCount') + '\nXMLTV: ' + valueOf(result, 'guidePath', 'GuidePath') + '\nM3U: ' + valueOf(result, 'm3uPath', 'M3uPath') + '\nChannels: ' + valueOf(result, 'channelCount', 'ChannelCount') + '\nProgrammes: ' + valueOf(result, 'programmeCount', 'ProgrammeCount'));
+                        }).catch(function (err) {
+                            setStatus(configPage, problemMessage(err, 'Refresh failed.'));
+                        }).finally(Dashboard.hideLoadingMsg);
+                    }
+
+                    if (button.id === 'btnLogs') {
+                        Dashboard.showLoadingMsg();
+                        ApiClient.ajax({
+                            type: 'GET',
+                            url: ApiClient.getUrl('HDHomeRunGuide/Logs')
+                        }).then(function (logs) {
+                            setStatus(configPage, logs && logs.length ? logs.join('\n') : 'No HDHomeRun Guide plugin logs recorded yet.');
+                        }).catch(function (err) {
+                            setStatus(configPage, problemMessage(err, 'Could not load plugin logs.'));
+                        }).finally(Dashboard.hideLoadingMsg);
+                    }
+                }
+
+                if (!window.hdhomerunGuideConfigBound) {
+                    window.hdhomerunGuideConfigBound = true;
+                    document.addEventListener('submit', submitForm);
+                    document.addEventListener('click', clickButton);
+                    document.addEventListener('viewshow', function (event) {
+                        if (event.target && event.target.id === rootId) {
+                            loadConfig(event.target);
+                        }
+                    });
+                }
+
+                loadConfig(findPage(document.currentScript));
             })();
         </script>
     </div>

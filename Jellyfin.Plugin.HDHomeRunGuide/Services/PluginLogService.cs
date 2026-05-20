@@ -24,7 +24,7 @@ public sealed class PluginLogService
     public PluginLogService(ILogger<PluginLogService> logger)
     {
         _logger = logger;
-        Info("HDHomeRun Guide diagnostics initialized. Build=0.1.1.0-discovery-logs");
+        Info("HDHomeRun Guide diagnostics initialized. Build=0.1.2.0-scoped-ui");
     }
 
     /// <summary>
