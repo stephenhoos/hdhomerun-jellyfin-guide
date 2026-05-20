@@ -11,7 +11,6 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
@@ -32,6 +31,19 @@ def fetch_json(url: str, timeout: int = DEFAULT_TIMEOUT) -> Any:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             charset = response.headers.get_content_charset() or "utf-8"
             return json.loads(response.read().decode(charset))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code} fetching {redact_url(url)}: {detail[:300]}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Unable to fetch {redact_url(url)}: {exc.reason}") from exc
+
+
+def fetch_text(url: str, timeout: int = DEFAULT_TIMEOUT) -> str:
+    request = urllib.request.Request(url, headers={"User-Agent": "hdhomerun-to-xmltv/1.0"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            charset = response.headers.get_content_charset() or "utf-8"
+            return response.read().decode(charset)
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"HTTP {exc.code} fetching {redact_url(url)}: {detail[:300]}") from exc
@@ -93,92 +105,29 @@ def normalize_device_url(device: str | None) -> str:
     if not device:
         discovered = discover_device_url()
         if discovered:
-            return discovered
+            return validate_local_http_url(discovered, "HDHomeRun device URL")
         raise RuntimeError("No HDHomeRun device found. Install hdhomerun_config or pass --device.")
     if device.startswith(("http://", "https://")):
         return validate_local_http_url(device.rstrip("/"), "HDHomeRun device URL")
     return validate_local_http_url(f"http://{device.rstrip('/')}", "HDHomeRun device URL")
 
 
-def build_guide_url(auth: str, start: int | None, guide_number: str | None) -> str:
-    query = {"DeviceAuth": auth}
-    if start is not None:
-        query["Start"] = str(start)
-    if guide_number:
-        query["GuideNumber"] = guide_number
-    return "https://api.hdhomerun.com/api/guide?" + urllib.parse.urlencode(query)
+def build_xmltv_url(auth: str) -> str:
+    if not auth:
+        raise RuntimeError("DeviceAuth is required to build the SiliconDust XMLTV URL")
+    return "https://api.hdhomerun.com/api/xmltv?" + urllib.parse.urlencode({"DeviceAuth": auth})
 
 
-def xmltv_time(epoch: int) -> str:
-    return datetime.fromtimestamp(epoch, timezone.utc).strftime("%Y%m%d%H%M%S +0000")
+def validate_xmltv(xmltv: str) -> tuple[int, int]:
+    try:
+        root = ET.fromstring(xmltv)
+    except ET.ParseError as exc:
+        raise RuntimeError("SiliconDust XMLTV API did not return valid XMLTV XML") from exc
 
+    if root.tag != "tv":
+        raise RuntimeError("SiliconDust XMLTV API did not return a tv root element")
 
-def child(parent: ET.Element, tag: str, text: Any = None, **attrs: str) -> ET.Element:
-    element = ET.SubElement(parent, tag, attrs)
-    if text is not None and text != "":
-        element.text = str(text)
-    return element
-
-
-def channel_id(entry: dict[str, Any]) -> str:
-    return str(entry.get("GuideNumber") or entry.get("GuideName") or entry.get("Affiliate"))
-
-
-def add_channels(root: ET.Element, guide: list[dict[str, Any]], lineup_by_number: dict[str, dict[str, Any]]) -> None:
-    seen: set[str] = set()
-    for entry in guide:
-        guide_number = channel_id(entry)
-        if not guide_number or guide_number in seen:
-            continue
-        seen.add(guide_number)
-
-        lineup_entry = lineup_by_number.get(guide_number, {})
-        guide_name = entry.get("GuideName") or lineup_entry.get("GuideName") or guide_number
-        affiliate = entry.get("Affiliate")
-
-        channel = child(root, "channel", id=guide_number)
-        child(channel, "display-name", guide_number)
-        if guide_name and guide_name != guide_number:
-            child(channel, "display-name", guide_name)
-        if affiliate and affiliate not in {guide_name, guide_number}:
-            child(channel, "display-name", affiliate)
-        if entry.get("ImageURL"):
-            child(channel, "icon", src=str(entry["ImageURL"]))
-
-
-def add_programmes(root: ET.Element, guide: list[dict[str, Any]]) -> int:
-    count = 0
-    for channel_entry in guide:
-        guide_number = channel_id(channel_entry)
-        for item in channel_entry.get("Guide") or []:
-            start = item.get("StartTime")
-            stop = item.get("EndTime")
-            title = item.get("Title")
-            if not guide_number or not start or not stop or not title:
-                continue
-
-            programme = child(
-                root,
-                "programme",
-                start=xmltv_time(int(start)),
-                stop=xmltv_time(int(stop)),
-                channel=guide_number,
-            )
-            child(programme, "title", title, lang="en")
-            child(programme, "sub-title", item.get("EpisodeTitle"), lang="en")
-            child(programme, "desc", item.get("Synopsis"), lang="en")
-            child(programme, "category", item.get("Category"), lang="en")
-            child(programme, "date", item.get("OriginalAirdate"))
-
-            if item.get("EpisodeNumber"):
-                child(programme, "episode-num", item["EpisodeNumber"], system="onscreen")
-            if item.get("ProgramID"):
-                child(programme, "episode-num", item["ProgramID"], system="dd_progid")
-            if item.get("ImageURL"):
-                child(programme, "icon", src=str(item["ImageURL"]))
-
-            count += 1
-    return count
+    return len(root.findall("channel")), len(root.findall("programme"))
 
 
 def write_m3u(lineup: list[dict[str, Any]], output: Path) -> int:
@@ -209,11 +158,6 @@ def sanitize_m3u_text(value: str) -> str:
     return "".join(ch for ch in value if ch not in "\r\n" and ord(ch) >= 32).strip().replace('"', "'")
 
 
-def indent_xml(element: ET.Element) -> None:
-    # ElementTree.indent exists in modern Python, but keep this function central.
-    ET.indent(element, space="  ")
-
-
 def redact_url(url: str) -> str:
     parsed = urllib.parse.urlsplit(url)
     query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
@@ -226,7 +170,7 @@ def redact_url(url: str) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Download HDHomeRun guide data and convert it to XMLTV for Jellyfin."
+        description="Download SiliconDust HDHomeRun XMLTV guide data for Jellyfin."
     )
     parser.add_argument(
         "--device",
@@ -242,18 +186,9 @@ def parse_args() -> argparse.Namespace:
         help="Optional output M3U tuner path for Jellyfin.",
     )
     parser.add_argument(
-        "--start",
-        type=int,
-        help="Unix epoch start time to request from SiliconDust. Default: API default.",
-    )
-    parser.add_argument(
-        "--guide-number",
-        help="Optional channel number filter, for example 2.1.",
-    )
-    parser.add_argument(
         "--print-source",
         action="store_true",
-        help="Print the redacted guide API URL used.",
+        help="Print the redacted XMLTV API URL used.",
     )
     return parser.parse_args()
 
@@ -272,33 +207,20 @@ def main() -> int:
         raise RuntimeError(f"No DeviceAuth found in {device_url}/discover.json")
 
     lineup = fetch_json(lineup_url)
-    lineup_by_number = {str(item.get("GuideNumber")): item for item in lineup if item.get("GuideNumber")}
+    if not isinstance(lineup, list):
+        raise RuntimeError("HDHomeRun LineupURL did not return a lineup list")
 
-    guide_url = build_guide_url(auth, args.start, args.guide_number)
+    guide_url = build_xmltv_url(auth)
     if args.print_source:
-        print(f"Guide API: {redact_url(guide_url)}", file=sys.stderr)
-    guide = fetch_json(guide_url)
-    if not isinstance(guide, list):
-        raise RuntimeError("Guide API did not return a channel list")
-    if args.guide_number:
-        guide = [entry for entry in guide if channel_id(entry) == args.guide_number]
-
-    root = ET.Element(
-        "tv",
-        {
-            "generator-info-name": "hdhomerun-to-xmltv",
-            "source-info-name": "SiliconDust HDHomeRun",
-        },
-    )
-    add_channels(root, guide, lineup_by_number)
-    programme_count = add_programmes(root, guide)
-    indent_xml(root)
+        print(f"XMLTV API: {redact_url(guide_url)}", file=sys.stderr)
+    xmltv = fetch_text(guide_url)
+    channel_count, programme_count = validate_xmltv(xmltv)
 
     output = Path(args.out).expanduser().resolve()
-    output.write_bytes(ET.tostring(root, encoding="utf-8", xml_declaration=True))
+    output.write_text(xmltv, encoding="utf-8")
 
     print(f"Wrote {output}")
-    print(f"Channels: {len(guide)}")
+    print(f"Channels: {channel_count}")
     print(f"Programmes: {programme_count}")
 
     if args.m3u_out:

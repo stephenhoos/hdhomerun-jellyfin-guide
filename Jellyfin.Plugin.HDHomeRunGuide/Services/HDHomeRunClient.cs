@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.HDHomeRunGuide.Services;
 
 /// <summary>
-/// Talks to HDHomeRun devices and the SiliconDust guide endpoint.
+/// Talks to HDHomeRun devices.
 /// </summary>
 public sealed class HDHomeRunClient
 {
@@ -89,35 +89,6 @@ public sealed class HDHomeRunClient
             cancellationToken).ConfigureAwait(false);
 
         return lineup ?? [];
-    }
-
-    /// <summary>
-    /// Fetches guide data.
-    /// </summary>
-    /// <param name="deviceAuth">HDHomeRun DeviceAuth token.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Guide channels.</returns>
-    public async Task<IReadOnlyList<GuideChannel>> GetGuideAsync(string deviceAuth, CancellationToken cancellationToken)
-    {
-        var url = "https://api.hdhomerun.com/api/guide?Duration=24&DeviceAuth=" + Uri.EscapeDataString(deviceAuth);
-        _logger.LogInformation("Fetching HDHomeRun guide data from {GuideUrl}", RedactGuideUrl(url));
-
-        var guide = await HttpClient.GetFromJsonAsync<List<GuideChannel>>(url, cancellationToken).ConfigureAwait(false);
-        return guide ?? [];
-    }
-
-    /// <summary>
-    /// Fetches paid DVR XMLTV guide data.
-    /// </summary>
-    /// <param name="deviceAuth">HDHomeRun DeviceAuth token.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>XMLTV guide text.</returns>
-    public async Task<string> GetXmlTvAsync(string deviceAuth, CancellationToken cancellationToken)
-    {
-        var url = "https://api.hdhomerun.com/api/xmltv?DeviceAuth=" + Uri.EscapeDataString(deviceAuth);
-        _logger.LogInformation("Fetching HDHomeRun paid DVR XMLTV guide data from {GuideUrl}", RedactGuideUrl(url));
-
-        return await HttpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -226,17 +197,6 @@ public sealed class HDHomeRunClient
         }
 
         return false;
-    }
-
-    private static string RedactGuideUrl(string url)
-    {
-        var question = url.IndexOf('?', StringComparison.Ordinal);
-        if (question < 0)
-        {
-            return url;
-        }
-
-        return url[..question] + "?DeviceAuth=REDACTED";
     }
 
     private static IEnumerable<string> ExpandSubnet(string subnet)

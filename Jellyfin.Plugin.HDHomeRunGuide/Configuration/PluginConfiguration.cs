@@ -28,11 +28,6 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     public bool SkipDisabledChannels { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets a value indicating whether to use the paid DVR XMLTV guide endpoint.
-    /// </summary>
-    public bool UseXmlTvGuideData { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the plugin should update Jellyfin Live TV paths after refresh.
     /// </summary>
     public bool AutoConfigureLiveTv { get; set; } = true;

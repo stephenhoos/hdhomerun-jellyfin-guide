@@ -6,12 +6,15 @@ The plugin reads `DeviceAuth` from your HDHomeRun tuner, generates Jellyfin-comp
 
 ## Why this exists
 
-Jellyfin's native HDHomeRun guide flow can be unreliable depending on tuner, subscription, and cache state. This plugin keeps the setup inside Jellyfin while using SiliconDust's own guide APIs directly.
+Jellyfin's native HDHomeRun guide flow can be unreliable depending on tuner, subscription, and cache state. This plugin keeps the setup inside Jellyfin while using SiliconDust's official XMLTV API directly.
 
-It supports two guide modes:
+The guide source is always:
 
-- **Standard guide API**: uses `https://api.hdhomerun.com/api/guide?Duration=24&DeviceAuth=...`.
-- **Paid DVR XMLTV API**: uses `https://api.hdhomerun.com/api/xmltv?DeviceAuth=...` for users with SiliconDust DVR guide service. This can provide a much larger guide window.
+```text
+https://api.hdhomerun.com/api/xmltv?DeviceAuth=...
+```
+
+SiliconDust has indicated this XMLTV endpoint now supports free guide access and automatically provides the DVR/subscription guide depth when the tuner token is entitled to it.
 
 ## Features
 
@@ -20,7 +23,7 @@ It supports two guide modes:
 - Optional subnet scan fallback when Jellyfin discovery returns no devices.
 - Automatic background refresh on a configurable interval.
 - Immediate refresh after saving plugin configuration.
-- Standard and paid DVR XMLTV guide modes.
+- XMLTV-only guide retrieval from SiliconDust.
 - Automatic Jellyfin Live TV M3U/XMLTV path management.
 - Explicit Jellyfin channel mappings for M3U/XMLTV imports.
 - Stale Jellyfin XMLTV cache deletion before each guide import.
@@ -65,8 +68,8 @@ Jellyfin.Plugin.HDHomeRunGuide/bin/Release/net9.0/
 Typical plugin directories:
 
 ```text
-Linux: /var/lib/jellyfin/plugins/HDHomeRun Guide_0.2.0.1/
-macOS: ~/Library/Application Support/jellyfin/plugins/HDHomeRun Guide_0.2.0.1/
+Linux: /var/lib/jellyfin/plugins/HDHomeRun Guide_0.3.0.0/
+macOS: ~/Library/Application Support/jellyfin/plugins/HDHomeRun Guide_0.3.0.0/
 ```
 
 ## Configure
@@ -75,12 +78,9 @@ In Jellyfin:
 
 1. Open **Dashboard -> Plugins -> HDHomeRun Guide**.
 2. Click **Add My Tuners** to find your HDHomeRun with Jellyfin's built-in tuner discovery and configure Live TV automatically.
-3. Choose the guide source:
-   - Leave **Use paid DVR XMLTV guide data** unchecked for the standard SiliconDust guide API.
-   - Check it if you have SiliconDust's paid DVR guide service.
-4. Set the refresh interval.
-5. Leave **Update Jellyfin Live TV M3U/XMLTV paths after refresh** enabled unless you want to manage Live TV manually.
-6. Save.
+3. Set the refresh interval.
+4. Leave **Update Jellyfin Live TV M3U/XMLTV paths after refresh** enabled unless you want to manage Live TV manually.
+5. Save.
 
 Saving triggers an immediate refresh. Future refreshes run in the background.
 
@@ -88,11 +88,12 @@ You can still enter a tuner IP or URL manually, such as `192.168.1.4`, and use *
 
 ## Notes
 
-- The paid DVR XMLTV feed can be large. On a full guide import, Jellyfin may spend several minutes rebuilding its guide cache.
-- In paid XMLTV mode, a longer refresh interval such as 12 hours is usually more appropriate than frequent 1-2 hour refreshes.
+- The XMLTV feed can be large, especially for DVR subscribers. On a full guide import, Jellyfin may spend several minutes rebuilding its guide cache.
+- A longer refresh interval such as 12 hours is usually more appropriate than frequent 1-2 hour refreshes.
 - Generated XMLTV/M3U files are local to the Jellyfin server and are ignored by git.
 - Guide data may contain local channel metadata and tuner URLs; do not commit generated guide files.
 
 ## License
 
-MIT
+MIT. Redistribution of this software or substantial portions of it must include
+the copyright notice and MIT license text from [LICENSE](LICENSE).

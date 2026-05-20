@@ -11,7 +11,7 @@
                     <div class="sectionTitleContainer flex align-items-center">
                         <h2 class="sectionTitle">HDHomeRun Guide</h2>
                     </div>
-                    <div class="fieldDescription">Plugin UI build: 0.2.0.0-helper-url-guard</div>
+                    <div class="fieldDescription">Plugin UI build: 0.3.0.0-xmltv-only</div>
 
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="txtTunerAddress">Tuner IP or URL</label>
@@ -33,11 +33,6 @@
                     <label class="checkboxContainer">
                         <input is="emby-checkbox" id="chkSkipDrm" name="chkSkipDrm" type="checkbox" />
                         <span>Skip DRM channels in generated M3U</span>
-                    </label>
-
-                    <label class="checkboxContainer">
-                        <input is="emby-checkbox" id="chkUseXmlTvGuideData" name="chkUseXmlTvGuideData" type="checkbox" />
-                        <span>Use paid DVR XMLTV guide data</span>
                     </label>
 
                     <label class="checkboxContainer">
@@ -130,10 +125,9 @@
                         configPage.querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
                         configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 12;
                         configPage.querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
-                        configPage.querySelector('#chkUseXmlTvGuideData').checked = config.UseXmlTvGuideData === true;
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
 
-                        const lines = ['Plugin UI build: 0.2.0.0-helper-url-guard'];
+                        const lines = ['Plugin UI build: 0.3.0.0-xmltv-only'];
                         if (config.LastRefreshUtc) {
                             lines.push('Last refresh: ' + config.LastRefreshUtc);
                         }
@@ -159,7 +153,6 @@
                         config.ScanSubnet = configPage.querySelector('#txtScanSubnet').value;
                         config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || '12', 10);
                         config.SkipDisabledChannels = configPage.querySelector('#chkSkipDrm').checked;
-                        config.UseXmlTvGuideData = configPage.querySelector('#chkUseXmlTvGuideData').checked;
                         config.AutoConfigureLiveTv = configPage.querySelector('#chkAutoConfigureLiveTv').checked;
                         return ApiClient.updatePluginConfiguration(pluginId, config);
                     });

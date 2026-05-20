@@ -19,6 +19,7 @@ public sealed class HDHomeRunGuideService
 {
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private readonly HDHomeRunClient _client;
+    private readonly XmlTvGuideService _xmlTvGuideService;
     private readonly GuideWriter _writer;
     private readonly LiveTvConfigurator _liveTvConfigurator;
     private readonly PluginLogService _pluginLog;
@@ -28,18 +29,21 @@ public sealed class HDHomeRunGuideService
     /// Initializes a new instance of the <see cref="HDHomeRunGuideService"/> class.
     /// </summary>
     /// <param name="client">HDHomeRun client.</param>
+    /// <param name="xmlTvGuideService">XMLTV guide service.</param>
     /// <param name="writer">Guide writer.</param>
     /// <param name="liveTvConfigurator">Live TV configurator.</param>
     /// <param name="pluginLog">Plugin diagnostic log.</param>
     /// <param name="logger">Logger.</param>
     public HDHomeRunGuideService(
         HDHomeRunClient client,
+        XmlTvGuideService xmlTvGuideService,
         GuideWriter writer,
         LiveTvConfigurator liveTvConfigurator,
         PluginLogService pluginLog,
         ILogger<HDHomeRunGuideService> logger)
     {
         _client = client;
+        _xmlTvGuideService = xmlTvGuideService;
         _writer = writer;
         _liveTvConfigurator = liveTvConfigurator;
         _pluginLog = pluginLog;
@@ -79,19 +83,12 @@ public sealed class HDHomeRunGuideService
         {
             var discover = await _client.GetDiscoverInfoAsync(config.TunerAddress, cancellationToken).ConfigureAwait(false);
             var lineup = await _client.GetLineupAsync(discover, cancellationToken).ConfigureAwait(false);
-            var result = config.UseXmlTvGuideData
-                ? await _writer.WriteXmlTvAsync(
-                    await _client.GetXmlTvAsync(discover.DeviceAuth, cancellationToken).ConfigureAwait(false),
-                    lineup,
-                    plugin.DataFolderPath,
-                    config.SkipDisabledChannels,
-                    cancellationToken).ConfigureAwait(false)
-                : await _writer.WriteAsync(
-                    await _client.GetGuideAsync(discover.DeviceAuth, cancellationToken).ConfigureAwait(false),
-                    lineup,
-                    plugin.DataFolderPath,
-                    config.SkipDisabledChannels,
-                    cancellationToken).ConfigureAwait(false);
+            var result = await _writer.WriteXmlTvAsync(
+                await _xmlTvGuideService.GetXmlTvAsync(discover.DeviceAuth, cancellationToken).ConfigureAwait(false),
+                lineup,
+                plugin.DataFolderPath,
+                config.SkipDisabledChannels,
+                cancellationToken).ConfigureAwait(false);
             result = result with { TunerCount = discover.TunerCount };
 
             config.LastGuidePath = result.GuidePath;
