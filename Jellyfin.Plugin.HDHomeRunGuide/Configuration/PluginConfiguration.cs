@@ -20,7 +20,7 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     /// <summary>
     /// Gets or sets the scheduled refresh interval in hours.
     /// </summary>
-    public int RefreshIntervalHours { get; set; } = 12;
+    public int RefreshIntervalHours { get; set; } = 24;
 
     /// <summary>
     /// Gets or sets a value indicating whether disabled lineup channels should be skipped.
@@ -46,6 +46,11 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the last successful refresh timestamp.
     /// </summary>
     public string LastRefreshUtc { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the next randomized refresh timestamp.
+    /// </summary>
+    public string NextRefreshUtc { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the last discovered HDHomeRun tuner count.

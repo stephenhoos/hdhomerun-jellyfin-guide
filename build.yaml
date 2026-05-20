@@ -14,4 +14,6 @@ artifacts:
 - "Jellyfin.Plugin.HDHomeRunGuide.dll"
 changelog: >
   Migrates guide retrieval to SiliconDust's XMLTV API and removes the
-  render-oriented guide API reconstruction path.
+  render-oriented guide API reconstruction path. Reads fresh DeviceAuth for
+  each refresh, accepts compressed XMLTV responses, and randomizes automatic
+  refresh timing.

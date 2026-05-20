@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import ipaddress
 import json
 import subprocess
@@ -26,11 +27,11 @@ ALLOWED_IPV4_NETWORKS = (
 
 
 def fetch_json(url: str, timeout: int = DEFAULT_TIMEOUT) -> Any:
-    request = urllib.request.Request(url, headers={"User-Agent": "hdhomerun-to-xmltv/1.0"})
+    request = urllib.request.Request(url, headers={"Accept-Encoding": "gzip", "User-Agent": "hdhomerun-to-xmltv/1.0"})
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             charset = response.headers.get_content_charset() or "utf-8"
-            return json.loads(response.read().decode(charset))
+            return json.loads(read_response_body(response).decode(charset))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"HTTP {exc.code} fetching {redact_url(url)}: {detail[:300]}") from exc
@@ -39,16 +40,23 @@ def fetch_json(url: str, timeout: int = DEFAULT_TIMEOUT) -> Any:
 
 
 def fetch_text(url: str, timeout: int = DEFAULT_TIMEOUT) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": "hdhomerun-to-xmltv/1.0"})
+    request = urllib.request.Request(url, headers={"Accept-Encoding": "gzip", "User-Agent": "hdhomerun-to-xmltv/1.0"})
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             charset = response.headers.get_content_charset() or "utf-8"
-            return response.read().decode(charset)
+            return read_response_body(response).decode(charset)
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"HTTP {exc.code} fetching {redact_url(url)}: {detail[:300]}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Unable to fetch {redact_url(url)}: {exc.reason}") from exc
+
+
+def read_response_body(response: Any) -> bytes:
+    body = response.read()
+    if response.headers.get("Content-Encoding", "").lower() == "gzip":
+        return gzip.decompress(body)
+    return body
 
 
 def validate_local_http_url(url: str, label: str) -> str:

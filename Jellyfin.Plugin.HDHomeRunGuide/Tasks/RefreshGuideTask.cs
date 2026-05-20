@@ -46,18 +46,22 @@ public sealed class RefreshGuideTask : IScheduledTask
     /// <inheritdoc />
     public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
     {
-        var hours = Plugin.Instance?.Configuration.RefreshIntervalHours ?? 12;
+        var hours = Plugin.Instance?.Configuration.RefreshIntervalHours ?? 24;
         if (hours < 1)
         {
-            hours = 12;
+            hours = 24;
         }
+
+        var minimumMinutes = Math.Max(30, (int)Math.Round(hours * 50.0));
+        var maximumMinutes = Math.Max(minimumMinutes + 1, (int)Math.Round(hours * 70.0));
+        var randomizedInterval = TimeSpan.FromMinutes(Random.Shared.Next(minimumMinutes, maximumMinutes + 1));
 
         return
         [
             new TaskTriggerInfo
             {
                 Type = "IntervalTrigger",
-                IntervalTicks = TimeSpan.FromHours(hours).Ticks
+                IntervalTicks = randomizedInterval.Ticks
             }
         ];
     }

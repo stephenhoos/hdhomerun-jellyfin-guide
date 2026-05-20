@@ -85,7 +85,7 @@ public sealed class GuideRefreshHostedService : IHostedService, IDisposable
             return;
         }
 
-        if (!IsRefreshDue(config.LastRefreshUtc, config.RefreshIntervalHours))
+        if (!IsRefreshDue(config.LastRefreshUtc, config.NextRefreshUtc, config.RefreshIntervalHours))
         {
             return;
         }
@@ -105,9 +105,18 @@ public sealed class GuideRefreshHostedService : IHostedService, IDisposable
         }
     }
 
-    private static bool IsRefreshDue(string lastRefreshUtc, int refreshIntervalHours)
+    private static bool IsRefreshDue(string lastRefreshUtc, string nextRefreshUtc, int refreshIntervalHours)
     {
         var hours = Math.Clamp(refreshIntervalHours, 1, 168);
+        if (DateTimeOffset.TryParse(
+            nextRefreshUtc,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out var nextRefresh))
+        {
+            return DateTimeOffset.UtcNow >= nextRefresh.ToUniversalTime();
+        }
+
         if (string.IsNullOrWhiteSpace(lastRefreshUtc)
             || !DateTimeOffset.TryParse(
                 lastRefreshUtc,

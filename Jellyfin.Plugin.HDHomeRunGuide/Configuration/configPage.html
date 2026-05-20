@@ -123,13 +123,16 @@
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         configPage.querySelector('#txtTunerAddress').value = config.TunerAddress || '';
                         configPage.querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
-                        configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 12;
+                        configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 24;
                         configPage.querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
 
                         const lines = ['Plugin UI build: 0.3.0.0-xmltv-only'];
                         if (config.LastRefreshUtc) {
                             lines.push('Last refresh: ' + config.LastRefreshUtc);
+                        }
+                        if (config.NextRefreshUtc) {
+                            lines.push('Next randomized refresh: ' + config.NextRefreshUtc);
                         }
                         if (config.LastTunerCount) {
                             lines.push('Tuners: ' + config.LastTunerCount);
@@ -151,7 +154,7 @@
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         config.TunerAddress = configPage.querySelector('#txtTunerAddress').value;
                         config.ScanSubnet = configPage.querySelector('#txtScanSubnet').value;
-                        config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || '12', 10);
+                        config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || '24', 10);
                         config.SkipDisabledChannels = configPage.querySelector('#chkSkipDrm').checked;
                         config.AutoConfigureLiveTv = configPage.querySelector('#chkAutoConfigureLiveTv').checked;
                         return ApiClient.updatePluginConfiguration(pluginId, config);

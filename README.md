@@ -16,12 +16,18 @@ https://api.hdhomerun.com/api/xmltv?DeviceAuth=...
 
 SiliconDust has indicated this XMLTV endpoint now supports free guide access and automatically provides the DVR/subscription guide depth when the tuner token is entitled to it.
 
+The public SiliconDust XMLTV documentation is here:
+
+https://github.com/Silicondust/documentation/wiki/XMLTV-Guide-Data
+
+That page documents the XMLTV URL, gzip requirement, fresh `DeviceAuth` requirement, the newer `Email` + `DeviceIDs` access option, and randomized scheduling guidance. The plugin uses fresh `DeviceAuth` from the tuner on every refresh so it does not need to store SiliconDust account details. Public documentation may lag Nick's newer note that free 3-day XMLTV access is available without a DVR account.
+
 ## Features
 
 - Configurable HDHomeRun tuner IP/URL from the Jellyfin plugin page.
 - **Add My Tuners** button that uses Jellyfin's built-in HDHomeRun discovery.
 - Optional subnet scan fallback when Jellyfin discovery returns no devices.
-- Automatic background refresh on a configurable interval.
+- Automatic background refresh on a randomized configurable interval.
 - Immediate refresh after saving plugin configuration.
 - XMLTV-only guide retrieval from SiliconDust.
 - Automatic Jellyfin Live TV M3U/XMLTV path management.
@@ -89,7 +95,8 @@ You can still enter a tuner IP or URL manually, such as `192.168.1.4`, and use *
 ## Notes
 
 - The XMLTV feed can be large, especially for DVR subscribers. On a full guide import, Jellyfin may spend several minutes rebuilding its guide cache.
-- A longer refresh interval such as 12 hours is usually more appropriate than frequent 1-2 hour refreshes.
+- The default refresh interval is 24 hours. The plugin randomizes the next automatic refresh around the configured interval so requests do not land at a fixed time each day.
+- SiliconDust documents `DeviceAuth` as changing regularly, so the plugin reads it from `discover.json` each time rather than storing it.
 - Generated XMLTV/M3U files are local to the Jellyfin server and are ignored by git.
 - Guide data may contain local channel metadata and tuner URLs; do not commit generated guide files.
 

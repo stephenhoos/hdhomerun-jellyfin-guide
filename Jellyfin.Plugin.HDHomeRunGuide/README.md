@@ -6,7 +6,7 @@ Jellyfin server plugin for SiliconDust HDHomeRun guide imports.
 
 - Stores the tuner IP/URL in Jellyfin plugin configuration.
 - Can scan a local IPv4 subnet for HDHomeRun devices from the Jellyfin server.
-- Refreshes automatically in the background on a configurable interval.
+- Refreshes automatically in the background on a randomized configurable interval.
 - Still exposes a Jellyfin scheduled task for manual/admin runs.
 - Uses SiliconDust's XMLTV API as the only guide source.
 - Writes `hdhomerun-guide.xml` and `hdhomerun-lineup.m3u` under the plugin data folder.
@@ -39,3 +39,7 @@ dotnet build Jellyfin.Plugin.HDHomeRunGuide.csproj -c Release
 5. Save.
 
 The plugin immediately refreshes guide data after saving and keeps it fresh automatically.
+
+The plugin follows SiliconDust's XMLTV guidance by accepting gzip responses,
+reading fresh `DeviceAuth` from the tuner for every refresh, and randomizing the
+next automatic refresh time instead of downloading at a fixed wall-clock time.

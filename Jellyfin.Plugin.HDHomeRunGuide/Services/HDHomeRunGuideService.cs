@@ -94,6 +94,7 @@ public sealed class HDHomeRunGuideService
             config.LastGuidePath = result.GuidePath;
             config.LastM3uPath = result.M3uPath;
             config.LastRefreshUtc = DateTimeOffset.UtcNow.ToString("O");
+            config.NextRefreshUtc = NextRandomizedRefreshUtc(config.RefreshIntervalHours).ToString("O");
             config.LastTunerCount = discover.TunerCount;
             config.LastError = string.Empty;
 
@@ -233,6 +234,14 @@ public sealed class HDHomeRunGuideService
             .ToList();
         _pluginLog.Info("Fallback discovery returned " + deduped.Count + " unique tuners.");
         return deduped;
+    }
+
+    private static DateTimeOffset NextRandomizedRefreshUtc(int refreshIntervalHours)
+    {
+        var hours = Math.Clamp(refreshIntervalHours, 1, 168);
+        var minimumMinutes = Math.Max(30, (int)Math.Round(hours * 50.0));
+        var maximumMinutes = Math.Max(minimumMinutes + 1, (int)Math.Round(hours * 70.0));
+        return DateTimeOffset.UtcNow.AddMinutes(Random.Shared.Next(minimumMinutes, maximumMinutes + 1));
     }
 
     private async Task<IReadOnlyList<DiscoveredTuner>> DiscoverBuiltInTunersAsync(CancellationToken cancellationToken)
