@@ -41,11 +41,12 @@ public sealed class XmlTvGuideService
     /// Fetches XMLTV guide data from SiliconDust.
     /// </summary>
     /// <param name="deviceAuth">HDHomeRun DeviceAuth token.</param>
+    /// <param name="requestPaidGuideWindow">Whether to ask for paid 14-day XMLTV data when available.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>XMLTV guide text.</returns>
-    public async Task<string> GetXmlTvAsync(string deviceAuth, CancellationToken cancellationToken)
+    public async Task<string> GetXmlTvAsync(string deviceAuth, bool requestPaidGuideWindow, CancellationToken cancellationToken)
     {
-        var url = BuildXmlTvUri(deviceAuth);
+        var url = BuildXmlTvUri(deviceAuth, requestPaidGuideWindow);
         _logger.LogInformation("Fetching HDHomeRun XMLTV guide data from {GuideUrl}", RedactGuideUrl(url));
 
         return await HttpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
@@ -55,15 +56,17 @@ public sealed class XmlTvGuideService
     /// Builds the SiliconDust XMLTV endpoint URI.
     /// </summary>
     /// <param name="deviceAuth">HDHomeRun DeviceAuth token.</param>
+    /// <param name="requestPaidGuideWindow">Whether to ask for paid 14-day XMLTV data when available.</param>
     /// <returns>XMLTV endpoint URI.</returns>
-    public static string BuildXmlTvUri(string deviceAuth)
+    public static string BuildXmlTvUri(string deviceAuth, bool requestPaidGuideWindow)
     {
         if (string.IsNullOrWhiteSpace(deviceAuth))
         {
             throw new ArgumentException("DeviceAuth is required.", nameof(deviceAuth));
         }
 
-        return "https://api.hdhomerun.com/api/xmltv?DeviceAuth=" + Uri.EscapeDataString(deviceAuth);
+        var url = "https://api.hdhomerun.com/api/xmltv?DeviceAuth=" + Uri.EscapeDataString(deviceAuth);
+        return requestPaidGuideWindow ? url + "&Duration=14" : url;
     }
 
     private static string RedactGuideUrl(string url)

@@ -120,10 +120,13 @@ def normalize_device_url(device: str | None) -> str:
     return validate_local_http_url(f"http://{device.rstrip('/')}", "HDHomeRun device URL")
 
 
-def build_xmltv_url(auth: str) -> str:
+def build_xmltv_url(auth: str, request_paid_guide_window: bool = False) -> str:
     if not auth:
         raise RuntimeError("DeviceAuth is required to build the SiliconDust XMLTV URL")
-    return "https://api.hdhomerun.com/api/xmltv?" + urllib.parse.urlencode({"DeviceAuth": auth})
+    query = {"DeviceAuth": auth}
+    if request_paid_guide_window:
+        query["Duration"] = "14"
+    return "https://api.hdhomerun.com/api/xmltv?" + urllib.parse.urlencode(query)
 
 
 def validate_xmltv(xmltv: str) -> tuple[int, int]:
@@ -198,6 +201,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print the redacted XMLTV API URL used.",
     )
+    parser.add_argument(
+        "--paid",
+        action="store_true",
+        help="Ask SiliconDust for paid 14-day XMLTV data when available.",
+    )
     return parser.parse_args()
 
 
@@ -218,7 +226,7 @@ def main() -> int:
     if not isinstance(lineup, list):
         raise RuntimeError("HDHomeRun LineupURL did not return a lineup list")
 
-    guide_url = build_xmltv_url(auth)
+    guide_url = build_xmltv_url(auth, args.paid)
     if args.print_source:
         print(f"XMLTV API: {redact_url(guide_url)}", file=sys.stderr)
     xmltv = fetch_text(guide_url)

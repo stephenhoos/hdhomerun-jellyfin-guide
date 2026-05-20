@@ -15,5 +15,5 @@ artifacts:
 changelog: >
   Migrates guide retrieval to SiliconDust's XMLTV API and removes the
   render-oriented guide API reconstruction path. Reads fresh DeviceAuth for
-  each refresh, accepts compressed XMLTV responses, and randomizes automatic
-  refresh timing.
+  each refresh, can explicitly request the paid 14-day XMLTV window, accepts
+  compressed XMLTV responses, and randomizes automatic refresh timing.

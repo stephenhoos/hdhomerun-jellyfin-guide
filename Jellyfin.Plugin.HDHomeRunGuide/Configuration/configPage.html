@@ -36,6 +36,11 @@
                     </label>
 
                     <label class="checkboxContainer">
+                        <input is="emby-checkbox" id="chkRequestPaidXmlTvGuideData" name="chkRequestPaidXmlTvGuideData" type="checkbox" />
+                        <span>Request paid 14-day XMLTV guide when available</span>
+                    </label>
+
+                    <label class="checkboxContainer">
                         <input is="emby-checkbox" id="chkAutoConfigureLiveTv" name="chkAutoConfigureLiveTv" type="checkbox" />
                         <span>Update Jellyfin Live TV M3U/XMLTV paths after refresh</span>
                     </label>
@@ -125,6 +130,7 @@
                         configPage.querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
                         configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 24;
                         configPage.querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
+                        configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked = config.RequestPaidXmlTvGuideData === true;
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
 
                         const lines = ['Plugin UI build: 0.3.0.0-xmltv-only'];
@@ -156,6 +162,7 @@
                         config.ScanSubnet = configPage.querySelector('#txtScanSubnet').value;
                         config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || '24', 10);
                         config.SkipDisabledChannels = configPage.querySelector('#chkSkipDrm').checked;
+                        config.RequestPaidXmlTvGuideData = configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked;
                         config.AutoConfigureLiveTv = configPage.querySelector('#chkAutoConfigureLiveTv').checked;
                         return ApiClient.updatePluginConfiguration(pluginId, config);
                     });

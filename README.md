@@ -30,6 +30,7 @@ That page documents the XMLTV URL, gzip requirement, fresh `DeviceAuth` requirem
 - Automatic background refresh on a randomized configurable interval.
 - Immediate refresh after saving plugin configuration.
 - XMLTV-only guide retrieval from SiliconDust.
+- Optional paid guide request flag that appends `Duration=14`; SiliconDust may still decide the returned window from tuner/account entitlement.
 - Automatic Jellyfin Live TV M3U/XMLTV path management.
 - Explicit Jellyfin channel mappings for M3U/XMLTV imports.
 - Stale Jellyfin XMLTV cache deletion before each guide import.
@@ -84,9 +85,10 @@ In Jellyfin:
 
 1. Open **Dashboard -> Plugins -> HDHomeRun Guide**.
 2. Click **Add My Tuners** to find your HDHomeRun with Jellyfin's built-in tuner discovery and configure Live TV automatically.
-3. Set the refresh interval.
-4. Leave **Update Jellyfin Live TV M3U/XMLTV paths after refresh** enabled unless you want to manage Live TV manually.
-5. Save.
+3. Check **Request paid 14-day XMLTV guide when available** if you have SiliconDust DVR guide service.
+4. Set the refresh interval.
+5. Leave **Update Jellyfin Live TV M3U/XMLTV paths after refresh** enabled unless you want to manage Live TV manually.
+6. Save.
 
 Saving triggers an immediate refresh. Future refreshes run in the background.
 
@@ -95,6 +97,7 @@ You can still enter a tuner IP or URL manually, such as `192.168.1.4`, and use *
 ## Notes
 
 - The XMLTV feed can be large, especially for DVR subscribers. On a full guide import, Jellyfin may spend several minutes rebuilding its guide cache.
+- In testing, SiliconDust returned the same paid 14-day XMLTV feed with or without `Duration=14` when the tuner token had DVR entitlement. The checkbox keeps the request explicit, but entitlement appears to control the actual guide span.
 - The default refresh interval is 24 hours. The plugin randomizes the next automatic refresh around the configured interval so requests do not land at a fixed time each day.
 - SiliconDust documents `DeviceAuth` as changing regularly, so the plugin reads it from `discover.json` each time rather than storing it.
 - Generated XMLTV/M3U files are local to the Jellyfin server and are ignored by git.

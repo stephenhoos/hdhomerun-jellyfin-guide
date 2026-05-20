@@ -84,7 +84,7 @@ public sealed class HDHomeRunGuideService
             var discover = await _client.GetDiscoverInfoAsync(config.TunerAddress, cancellationToken).ConfigureAwait(false);
             var lineup = await _client.GetLineupAsync(discover, cancellationToken).ConfigureAwait(false);
             var result = await _writer.WriteXmlTvAsync(
-                await _xmlTvGuideService.GetXmlTvAsync(discover.DeviceAuth, cancellationToken).ConfigureAwait(false),
+                await _xmlTvGuideService.GetXmlTvAsync(discover.DeviceAuth, config.RequestPaidXmlTvGuideData, cancellationToken).ConfigureAwait(false),
                 lineup,
                 plugin.DataFolderPath,
                 config.SkipDisabledChannels,

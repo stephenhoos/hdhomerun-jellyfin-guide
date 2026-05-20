@@ -28,6 +28,11 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     public bool SkipDisabledChannels { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether to ask SiliconDust for paid 14-day XMLTV data when available.
+    /// </summary>
+    public bool RequestPaidXmlTvGuideData { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the plugin should update Jellyfin Live TV paths after refresh.
     /// </summary>
     public bool AutoConfigureLiveTv { get; set; } = true;
