@@ -94,7 +94,7 @@ public sealed class HDHomeRunGuideService
             config.LastGuidePath = result.GuidePath;
             config.LastM3uPath = result.M3uPath;
             config.LastRefreshUtc = DateTimeOffset.UtcNow.ToString("O");
-            config.NextRefreshUtc = NextRandomizedRefreshUtc(config.RefreshIntervalHours).ToString("O");
+            config.NextRefreshUtc = NextRandomizedRefreshUtc(GetEffectiveRefreshIntervalHours(config)).ToString("O");
             config.LastTunerCount = discover.TunerCount;
             config.LastError = string.Empty;
 
@@ -242,6 +242,18 @@ public sealed class HDHomeRunGuideService
         var minimumMinutes = Math.Max(30, (int)Math.Round(hours * 50.0));
         var maximumMinutes = Math.Max(minimumMinutes + 1, (int)Math.Round(hours * 70.0));
         return DateTimeOffset.UtcNow.AddMinutes(Random.Shared.Next(minimumMinutes, maximumMinutes + 1));
+    }
+
+    /// <summary>
+    /// Gets the effective automatic refresh interval in hours.
+    /// </summary>
+    /// <param name="configuration">Plugin configuration.</param>
+    /// <returns>Refresh interval in hours.</returns>
+    public static int GetEffectiveRefreshIntervalHours(PluginConfiguration configuration)
+    {
+        var fallback = configuration.RequestPaidXmlTvGuideData ? 168 : 36;
+        var hours = configuration.RefreshIntervalHours > 0 ? configuration.RefreshIntervalHours : fallback;
+        return Math.Clamp(hours, 1, 168);
     }
 
     private async Task<IReadOnlyList<DiscoveredTuner>> DiscoverBuiltInTunersAsync(CancellationToken cancellationToken)

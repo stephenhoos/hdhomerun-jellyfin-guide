@@ -20,7 +20,7 @@ public sealed class PluginConfiguration : BasePluginConfiguration
     /// <summary>
     /// Gets or sets the scheduled refresh interval in hours.
     /// </summary>
-    public int RefreshIntervalHours { get; set; } = 24;
+    public int RefreshIntervalHours { get; set; } = 36;
 
     /// <summary>
     /// Gets or sets a value indicating whether disabled lineup channels should be skipped.

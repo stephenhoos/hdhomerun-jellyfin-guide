@@ -66,6 +66,8 @@
             (function () {
                 const pluginId = 'dedaf64f-c6d3-4b51-b88e-64873ec088a5';
                 const rootId = 'hdhomerunGuideConfigPage';
+                const freeRefreshHours = 36;
+                const paidRefreshHours = 168;
 
                 function findPage(source) {
                     if (source && source.closest) {
@@ -92,6 +94,18 @@
                     }
 
                     return err.message || err.Message || err.detail || err.Detail || err.title || err.Title || fallback;
+                }
+
+                function defaultRefreshHours(configPage) {
+                    return configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked ? paidRefreshHours : freeRefreshHours;
+                }
+
+                function applyDefaultRefreshHours(configPage, force) {
+                    const input = configPage.querySelector('#txtRefreshHours');
+                    const current = parseInt(input.value || '0', 10);
+                    if (force || !current || current === freeRefreshHours || current === paidRefreshHours) {
+                        input.value = defaultRefreshHours(configPage);
+                    }
                 }
 
                 function renderTuners(configPage, tuners) {
@@ -128,10 +142,10 @@
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         configPage.querySelector('#txtTunerAddress').value = config.TunerAddress || '';
                         configPage.querySelector('#txtScanSubnet').value = config.ScanSubnet || '';
-                        configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || 24;
                         configPage.querySelector('#chkSkipDrm').checked = config.SkipDisabledChannels !== false;
                         configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked = config.RequestPaidXmlTvGuideData === true;
                         configPage.querySelector('#chkAutoConfigureLiveTv').checked = config.AutoConfigureLiveTv !== false;
+                        configPage.querySelector('#txtRefreshHours').value = config.RefreshIntervalHours || defaultRefreshHours(configPage);
 
                         const lines = ['Plugin UI build: 0.3.0.0-xmltv-only'];
                         if (config.LastRefreshUtc) {
@@ -160,7 +174,7 @@
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         config.TunerAddress = configPage.querySelector('#txtTunerAddress').value;
                         config.ScanSubnet = configPage.querySelector('#txtScanSubnet').value;
-                        config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || '24', 10);
+                        config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || defaultRefreshHours(configPage), 10);
                         config.SkipDisabledChannels = configPage.querySelector('#chkSkipDrm').checked;
                         config.RequestPaidXmlTvGuideData = configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked;
                         config.AutoConfigureLiveTv = configPage.querySelector('#chkAutoConfigureLiveTv').checked;
@@ -249,6 +263,14 @@
                 if (!window.hdhomerunGuideConfigDelegatesBound) {
                     window.hdhomerunGuideConfigDelegatesBound = true;
                     document.addEventListener('submit', submitForm);
+                    document.addEventListener('change', function (event) {
+                        if (event.target && event.target.id === 'chkRequestPaidXmlTvGuideData') {
+                            const configPage = findPage(event.target);
+                            if (configPage) {
+                                applyDefaultRefreshHours(configPage, false);
+                            }
+                        }
+                    });
                     document.addEventListener('viewshow', function (event) {
                         if (event.target && event.target.id === rootId) {
                             loadConfig(event.target);

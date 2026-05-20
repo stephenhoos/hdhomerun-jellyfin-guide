@@ -85,7 +85,7 @@ public sealed class GuideRefreshHostedService : IHostedService, IDisposable
             return;
         }
 
-        if (!IsRefreshDue(config.LastRefreshUtc, config.NextRefreshUtc, config.RefreshIntervalHours))
+        if (!IsRefreshDue(config.LastRefreshUtc, config.NextRefreshUtc, HDHomeRunGuideService.GetEffectiveRefreshIntervalHours(config)))
         {
             return;
         }

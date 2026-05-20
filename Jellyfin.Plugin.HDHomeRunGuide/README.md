@@ -45,3 +45,5 @@ The plugin immediately refreshes guide data after saving and keeps it fresh auto
 The plugin follows SiliconDust's XMLTV guidance by accepting gzip responses,
 reading fresh `DeviceAuth` from the tuner for every refresh, and randomizing the
 next automatic refresh time instead of downloading at a fixed wall-clock time.
+The default interval is 36 hours for free XMLTV mode and 168 hours when the paid
+14-day XMLTV request option is enabled.

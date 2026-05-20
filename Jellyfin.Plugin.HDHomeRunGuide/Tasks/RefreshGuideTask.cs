@@ -46,11 +46,8 @@ public sealed class RefreshGuideTask : IScheduledTask
     /// <inheritdoc />
     public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
     {
-        var hours = Plugin.Instance?.Configuration.RefreshIntervalHours ?? 24;
-        if (hours < 1)
-        {
-            hours = 24;
-        }
+        var config = Plugin.Instance?.Configuration;
+        var hours = config is null ? 36 : HDHomeRunGuideService.GetEffectiveRefreshIntervalHours(config);
 
         var minimumMinutes = Math.Max(30, (int)Math.Round(hours * 50.0));
         var maximumMinutes = Math.Max(minimumMinutes + 1, (int)Math.Round(hours * 70.0));

@@ -98,7 +98,7 @@ You can still enter a tuner IP or URL manually, such as `192.168.1.4`, and use *
 
 - The XMLTV feed can be large, especially for DVR subscribers. On a full guide import, Jellyfin may spend several minutes rebuilding its guide cache.
 - In testing, SiliconDust returned the same paid 14-day XMLTV feed with or without `Duration=14` when the tuner token had DVR entitlement. The checkbox keeps the request explicit, but entitlement appears to control the actual guide span.
-- The default refresh interval is 24 hours. The plugin randomizes the next automatic refresh around the configured interval so requests do not land at a fixed time each day.
+- The default refresh interval is 36 hours for free XMLTV mode and 168 hours for paid 14-day XMLTV mode. The plugin randomizes the next automatic refresh around the configured interval so requests do not land at a fixed time each day.
 - SiliconDust documents `DeviceAuth` as changing regularly, so the plugin reads it from `discover.json` each time rather than storing it.
 - Generated XMLTV/M3U files are local to the Jellyfin server and are ignored by git.
 - Guide data may contain local channel metadata and tuner URLs; do not commit generated guide files.
