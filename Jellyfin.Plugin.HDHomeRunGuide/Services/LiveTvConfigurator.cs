@@ -199,15 +199,7 @@ public sealed class LiveTvConfigurator
 
     private static string FirstNotEmpty(params string[] values)
     {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return string.Empty;
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
 
     private static string BuildFriendlyName(int tunerCount)

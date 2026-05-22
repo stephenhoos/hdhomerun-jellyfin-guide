@@ -78,8 +78,12 @@ public sealed class PluginLogService
     {
         var line = $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz} [{level}] {RedactSecrets(message)}";
         _entries.Enqueue(line);
-        while (_entries.Count > MaxEntries && _entries.TryDequeue(out _))
+        while (_entries.Count > MaxEntries)
         {
+            if (!_entries.TryDequeue(out _))
+            {
+                break;
+            }
         }
 
         var logPath = GetLogPath();
@@ -110,7 +114,7 @@ public sealed class PluginLogService
             : Path.Combine(Plugin.Instance.DataFolderPath, LogFileName);
     }
 
-    private static string RedactSecrets(string value)
+    internal static string RedactSecrets(string value)
     {
         return RedactQueryValue(RedactQueryValue(RedactQueryValue(value, "DeviceAuth"), "Email"), "DeviceIDs");
     }

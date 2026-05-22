@@ -20,7 +20,6 @@ public sealed class HDHomeRunGuideService
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private readonly HDHomeRunClient _client;
     private readonly XmlTvGuideService _xmlTvGuideService;
-    private readonly GuideWriter _writer;
     private readonly LiveTvConfigurator _liveTvConfigurator;
     private readonly PluginLogService _pluginLog;
     private readonly ILogger<HDHomeRunGuideService> _logger;
@@ -30,21 +29,18 @@ public sealed class HDHomeRunGuideService
     /// </summary>
     /// <param name="client">HDHomeRun client.</param>
     /// <param name="xmlTvGuideService">XMLTV guide service.</param>
-    /// <param name="writer">Guide writer.</param>
     /// <param name="liveTvConfigurator">Live TV configurator.</param>
     /// <param name="pluginLog">Plugin diagnostic log.</param>
     /// <param name="logger">Logger.</param>
     public HDHomeRunGuideService(
         HDHomeRunClient client,
         XmlTvGuideService xmlTvGuideService,
-        GuideWriter writer,
         LiveTvConfigurator liveTvConfigurator,
         PluginLogService pluginLog,
         ILogger<HDHomeRunGuideService> logger)
     {
         _client = client;
         _xmlTvGuideService = xmlTvGuideService;
-        _writer = writer;
         _liveTvConfigurator = liveTvConfigurator;
         _pluginLog = pluginLog;
         _logger = logger;
@@ -81,9 +77,9 @@ public sealed class HDHomeRunGuideService
 
         try
         {
-            var discover = await _client.GetDiscoverInfoAsync(config.TunerAddress, cancellationToken).ConfigureAwait(false);
-            var lineup = await _client.GetLineupAsync(discover, cancellationToken).ConfigureAwait(false);
-            var result = await _writer.WriteXmlTvAsync(
+            var discover = await HDHomeRunClient.GetDiscoverInfoAsync(config.TunerAddress, cancellationToken).ConfigureAwait(false);
+            var lineup = await HDHomeRunClient.GetLineupAsync(discover, cancellationToken).ConfigureAwait(false);
+            var result = await GuideWriter.WriteXmlTvAsync(
                 await _xmlTvGuideService.GetXmlTvAsync(
                     discover.DeviceAuth,
                     config.XmlTvAccountEmail,
@@ -119,12 +115,12 @@ public sealed class HDHomeRunGuideService
 
             return result;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             config.LastError = ex.Message;
             plugin.UpdateConfiguration(config);
             _logger.LogError(ex, "HDHomeRun guide refresh failed");
-            throw;
+            throw new InvalidOperationException("HDHomeRun guide refresh failed: " + ex.Message, ex);
         }
     }
 
@@ -160,7 +156,7 @@ public sealed class HDHomeRunGuideService
 
         var tuners = await DiscoverTunersCoreAsync(config.ScanSubnet, cancellationToken).ConfigureAwait(false);
         _pluginLog.Info("Add My Tuners discovery returned " + tuners.Count + " tuners.");
-        var tuner = tuners.FirstOrDefault();
+        var tuner = tuners.Count > 0 ? tuners[0] : null;
 
         if (tuner is null)
         {
@@ -195,7 +191,7 @@ public sealed class HDHomeRunGuideService
     public async Task<DiscoveredTuner> TestTunerAsync(string address, CancellationToken cancellationToken)
     {
         _pluginLog.Info("Test Tuner requested for " + EmptyForLog(address) + ".");
-        var discover = await _client.GetDiscoverInfoAsync(address, cancellationToken).ConfigureAwait(false);
+        var discover = await HDHomeRunClient.GetDiscoverInfoAsync(address, cancellationToken).ConfigureAwait(false);
         return new DiscoveredTuner(
             HDHomeRunClient.NormalizeBaseUri(address).Host,
             discover.DeviceId,
@@ -291,7 +287,7 @@ public sealed class HDHomeRunGuideService
     {
         try
         {
-            var discover = await _client.GetDiscoverInfoAsync(address, cancellationToken).ConfigureAwait(false);
+            var discover = await HDHomeRunClient.GetDiscoverInfoAsync(address, cancellationToken).ConfigureAwait(false);
             return new DiscoveredTuner(
                 address,
                 FirstNotEmpty(discover.DeviceId, tunerHost.DeviceId),
@@ -327,18 +323,10 @@ public sealed class HDHomeRunGuideService
 
     private static string FirstNotEmpty(params string[] values)
     {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        return string.Empty;
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
 
-    private static IReadOnlyList<string> GetScanSubnets(string? configuredSubnet)
+    private static List<string> GetScanSubnets(string? configuredSubnet)
     {
         if (!string.IsNullOrWhiteSpace(configuredSubnet))
         {
@@ -375,7 +363,7 @@ public sealed class HDHomeRunGuideService
         return string.IsNullOrWhiteSpace(value) ? "(empty)" : value;
     }
 
-    private static string FormatList(IReadOnlyList<string> values)
+    private static string FormatList(List<string> values)
     {
         return values.Count == 0 ? "(none)" : string.Join(", ", values);
     }

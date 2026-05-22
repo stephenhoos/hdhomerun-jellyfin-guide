@@ -36,7 +36,7 @@ public sealed class HDHomeRunClient
     public HDHomeRunClient(ILogger<HDHomeRunClient> logger)
     {
         _logger = logger;
-        if (!HttpClient.DefaultRequestHeaders.UserAgent.Any())
+        if (HttpClient.DefaultRequestHeaders.UserAgent.Count == 0)
         {
             HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.1");
         }
@@ -48,7 +48,7 @@ public sealed class HDHomeRunClient
     /// <param name="address">Tuner address or base URL.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Discover information.</returns>
-    public async Task<DiscoverInfo> GetDiscoverInfoAsync(string address, CancellationToken cancellationToken)
+    public static async Task<DiscoverInfo> GetDiscoverInfoAsync(string address, CancellationToken cancellationToken)
     {
         var baseUri = NormalizeBaseUri(address);
         EnsureAllowedLocalHttpUri(baseUri, nameof(address));
@@ -81,7 +81,7 @@ public sealed class HDHomeRunClient
     /// <param name="discover">Discover information.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Lineup entries.</returns>
-    public async Task<IReadOnlyList<LineupItem>> GetLineupAsync(DiscoverInfo discover, CancellationToken cancellationToken)
+    public static async Task<IReadOnlyList<LineupItem>> GetLineupAsync(DiscoverInfo discover, CancellationToken cancellationToken)
     {
         EnsureAllowedLocalHttpUri(new Uri(discover.LineupUrl, UriKind.Absolute), nameof(discover.LineupUrl));
         var lineup = await HttpClient.GetFromJsonAsync<List<LineupItem>>(
@@ -149,7 +149,7 @@ public sealed class HDHomeRunClient
             value = "http://" + value;
         }
 
-        if (!value.EndsWith("/", StringComparison.Ordinal))
+        if (!value.EndsWith('/'))
         {
             value += "/";
         }
@@ -201,6 +201,12 @@ public sealed class HDHomeRunClient
 
     private static IEnumerable<string> ExpandSubnet(string subnet)
     {
+        var (network, broadcast) = ReadSubnetRange(subnet);
+        return EnumerateSubnetAddresses(network, broadcast);
+    }
+
+    private static (uint Network, uint Broadcast) ReadSubnetRange(string subnet)
+    {
         if (string.IsNullOrWhiteSpace(subnet))
         {
             throw new ArgumentException("Subnet is required.", nameof(subnet));
@@ -218,17 +224,30 @@ public sealed class HDHomeRunClient
         }
 
         var octets = parts[0].Split('.');
-        if (octets.Length != 4 || octets.Any(o => !byte.TryParse(o, NumberStyles.None, CultureInfo.InvariantCulture, out _)))
+        if (octets.Length != 4)
         {
             throw new ArgumentException("Invalid IPv4 subnet.", nameof(subnet));
         }
 
-        var ip = octets.Select(o => byte.Parse(o, CultureInfo.InvariantCulture)).ToArray();
+        var ip = new byte[4];
+        for (var index = 0; index < octets.Length; index++)
+        {
+            if (!byte.TryParse(octets[index], NumberStyles.None, CultureInfo.InvariantCulture, out ip[index]))
+            {
+                throw new ArgumentException("Invalid IPv4 subnet.", nameof(subnet));
+            }
+        }
+
         var value = ((uint)ip[0] << 24) | ((uint)ip[1] << 16) | ((uint)ip[2] << 8) | ip[3];
         var mask = uint.MaxValue << (32 - prefix);
         var network = value & mask;
         var broadcast = network | ~mask;
 
+        return (network, broadcast);
+    }
+
+    private static IEnumerable<string> EnumerateSubnetAddresses(uint network, uint broadcast)
+    {
         for (var candidate = network + 1; candidate < broadcast; candidate++)
         {
             yield return string.Create(

@@ -18,12 +18,8 @@ from xml.etree import ElementTree as ET  # nosemgrep: python.lang.security.use-d
 
 
 DEFAULT_TIMEOUT = 20
-ALLOWED_IPV4_NETWORKS = (
-    ipaddress.ip_network("10.0.0.0/8"),
-    ipaddress.ip_network("172.16.0.0/12"),
-    ipaddress.ip_network("192.168.0.0/16"),
-    ipaddress.ip_network("169.254.0.0/16"),
-)
+HDHOMERUN_DEVICE_URL_LABEL = "HDHomeRun device URL"
+LOCAL_TUNER_SCHEME = "http"
 
 
 def fetch_json(url: str, timeout: int = DEFAULT_TIMEOUT) -> Any:
@@ -85,9 +81,15 @@ def is_allowed_local_address(address: ipaddress.IPv4Address | ipaddress.IPv6Addr
     if address.is_link_local:
         return True
     if isinstance(address, ipaddress.IPv4Address):
-        return any(address in network for network in ALLOWED_IPV4_NETWORKS)
+        first, second, *_ = address.packed
+        return (
+            first == 10
+            or (first == 172 and 16 <= second <= 31)
+            or (first == 192 and second == 168)
+            or (first == 169 and second == 254)
+        )
     if isinstance(address, ipaddress.IPv6Address):
-        return address in ipaddress.ip_network("fc00::/7")
+        return address.packed[0] & 0xFE == 0xFC
     return False
 
 
@@ -117,7 +119,7 @@ def discover_device_url() -> str | None:
         if "found" in parts and "at" in parts:
             ip = parts[-1]
             if ":" not in ip:
-                return f"http://{ip}"
+                return build_local_tuner_url(ip)
 
     return None
 
@@ -126,11 +128,19 @@ def normalize_device_url(device: str | None) -> str:
     if not device:
         discovered = discover_device_url()
         if discovered:
-            return validate_local_http_url(discovered, "HDHomeRun device URL")
+            return validate_local_http_url(discovered, HDHOMERUN_DEVICE_URL_LABEL)
         raise RuntimeError("No HDHomeRun device found. Install hdhomerun_config or pass --device.")
-    if device.startswith(("http://", "https://")):
-        return validate_local_http_url(device.rstrip("/"), "HDHomeRun device URL")
-    return validate_local_http_url(f"http://{device.rstrip('/')}", "HDHomeRun device URL")
+    if is_absolute_http_url(device):
+        return validate_local_http_url(device.rstrip("/"), HDHOMERUN_DEVICE_URL_LABEL)
+    return validate_local_http_url(build_local_tuner_url(device.rstrip("/")), HDHOMERUN_DEVICE_URL_LABEL)
+
+
+def build_local_tuner_url(host: str) -> str:
+    return urllib.parse.urlunsplit((LOCAL_TUNER_SCHEME, host, "", "", ""))
+
+
+def is_absolute_http_url(value: str) -> bool:
+    return urllib.parse.urlsplit(value).scheme in {LOCAL_TUNER_SCHEME, "https"}
 
 
 def build_xmltv_url(auth: str, request_paid_guide_window: bool = False) -> str:

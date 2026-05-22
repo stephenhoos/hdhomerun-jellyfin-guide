@@ -31,7 +31,7 @@ public sealed class XmlTvGuideService
     public XmlTvGuideService(ILogger<XmlTvGuideService> logger)
     {
         _logger = logger;
-        if (!HttpClient.DefaultRequestHeaders.UserAgent.Any())
+        if (HttpClient.DefaultRequestHeaders.UserAgent.Count == 0)
         {
             HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("jellyfin-plugin-hdhomerun-guide/0.3.1");
         }
@@ -77,11 +77,11 @@ public sealed class XmlTvGuideService
                 throw new ArgumentException("DeviceIDs are required when using SiliconDust account email XMLTV access.", nameof(deviceIds));
             }
 
-            var emailUrl = "https://api.hdhomerun.com/api/xmltv?Email="
+            var query = "Email="
                 + Uri.EscapeDataString(accountEmail.Trim())
                 + "&DeviceIDs="
                 + Uri.EscapeDataString(NormalizeDeviceIds(deviceIds));
-            return requestPaidGuideWindow ? emailUrl + "&Duration=14" : emailUrl;
+            return BuildApiUri(query, requestPaidGuideWindow);
         }
 
         if (string.IsNullOrWhiteSpace(deviceAuth))
@@ -89,8 +89,17 @@ public sealed class XmlTvGuideService
             throw new ArgumentException("DeviceAuth is required.", nameof(deviceAuth));
         }
 
-        var url = "https://api.hdhomerun.com/api/xmltv?DeviceAuth=" + Uri.EscapeDataString(deviceAuth);
-        return requestPaidGuideWindow ? url + "&Duration=14" : url;
+        return BuildApiUri("DeviceAuth=" + Uri.EscapeDataString(deviceAuth), requestPaidGuideWindow);
+    }
+
+    private static string BuildApiUri(string query, bool requestPaidGuideWindow)
+    {
+        var builder = new UriBuilder(Uri.UriSchemeHttps, "api.hdhomerun.com")
+        {
+            Path = "api/xmltv",
+            Query = requestPaidGuideWindow ? query + "&Duration=14" : query
+        };
+        return builder.Uri.ToString();
     }
 
     private static string NormalizeDeviceIds(string deviceIds)
