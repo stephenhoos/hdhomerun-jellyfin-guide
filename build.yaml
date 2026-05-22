@@ -1,7 +1,7 @@
 ---
 name: "HDHomeRun Guide"
 guid: "dedaf64f-c6d3-4b51-b88e-64873ec088a5"
-version: "0.3.1.0"
+version: "0.3.2.0"
 targetAbi: "10.9.0.0"
 framework: "net9.0"
 overview: "Server-side HDHomeRun XMLTV guide refresh for Jellyfin"
@@ -16,9 +16,8 @@ owner: "Stephen Hoos"
 artifacts:
 - "Jellyfin.Plugin.HDHomeRunGuide.dll"
 changelog: >
-  Adds optional SiliconDust account email XMLTV access using the configured
-  tuner's DeviceID while preserving the zero-config fresh DeviceAuth path.
-  Updates release documentation to match SiliconDust's official XMLTV guide data
-  page: 2 days for everyone and 14 days with HDHomeRun DVR guide service, while
-  noting that SiliconDust controls the actual returned guide span. Sets the paid
-  XMLTV refresh default to 68 hours until the 14-day window returns consistently.
+  Resolves all open SonarQube Cloud findings on the main branch while preserving
+  the XMLTV-only HDHomeRun guide refresh behavior. Splits API responsibilities
+  into smaller controllers, cleans analyzer warnings in C#, JavaScript, HTML, and
+  the legacy Python helper, and excludes generated coverage expectations from the
+  SonarQube workflow for this plugin-only repository.

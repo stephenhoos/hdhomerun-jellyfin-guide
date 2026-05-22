@@ -24,7 +24,7 @@ public sealed class PluginLogService
     public PluginLogService(ILogger<PluginLogService> logger)
     {
         _logger = logger;
-        Info("HDHomeRun Guide diagnostics initialized. Build=0.3.1.0-xmltv-docs");
+        Info("HDHomeRun Guide diagnostics initialized. Build=0.3.2.0-sonarqube-clean");
     }
 
     /// <summary>

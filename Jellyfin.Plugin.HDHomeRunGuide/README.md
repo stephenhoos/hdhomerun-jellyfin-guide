@@ -3,7 +3,7 @@
 Jellyfin server plugin for SiliconDust HDHomeRun XMLTV guide imports.
 
 At SiliconDust/HDHomeRun's request, this plugin no longer uses the
-render-oriented `/api/guide` endpoint. Version `0.3.1.0` uses SiliconDust's
+render-oriented `/api/guide` endpoint. Version `0.3.2.0` uses SiliconDust's
 official XMLTV endpoint as the only guide source and treats Jellyfin as the
 consumer of the cached XMLTV file.
 
@@ -38,7 +38,7 @@ Or from this project folder:
 dotnet build Jellyfin.Plugin.HDHomeRunGuide.csproj -c Release
 ```
 
-The current plugin version is `0.3.1.0`.
+The current plugin version is `0.3.2.0`.
 
 ## Setup
 

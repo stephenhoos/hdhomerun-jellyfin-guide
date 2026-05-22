@@ -84,7 +84,7 @@ Jellyfin.Plugin.HDHomeRunGuide/bin/Release/net9.0/
 Current plugin version:
 
 ```text
-0.3.1.0
+0.3.2.0
 ```
 
 ## Install
@@ -99,8 +99,8 @@ Current plugin version:
 Typical plugin directories:
 
 ```text
-Linux: /var/lib/jellyfin/plugins/HDHomeRun Guide_0.3.1.0/
-macOS: ~/Library/Application Support/jellyfin/plugins/HDHomeRun Guide_0.3.1.0/
+Linux: /var/lib/jellyfin/plugins/HDHomeRun Guide_0.3.2.0/
+macOS: ~/Library/Application Support/jellyfin/plugins/HDHomeRun Guide_0.3.2.0/
 ```
 
 ## Configure
