@@ -1,0 +1,78 @@
+name: SonarQube Cloud
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Validate SonarQube configuration
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          missing=0
+          for name in SONAR_TOKEN SONAR_PROJECT_KEY SONAR_ORGANIZATION; do
+            if [ -z "${!name}" ]; then
+              echo "::error title=Missing GitHub configuration::$name is not set."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Install SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Restore dependencies
+        run: dotnet restore Jellyfin.Plugin.HDHomeRunGuide.sln
+
+      - name: Begin SonarQube analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet sonarscanner begin
+          /k:"${{ vars.SONAR_PROJECT_KEY }}"
+          /o:"${{ vars.SONAR_ORGANIZATION }}"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.scanner.scanAll=true
+
+      - name: Build
+        run: dotnet build Jellyfin.Plugin.HDHomeRunGuide.sln --configuration Release --no-restore --no-incremental
+
+      - name: End SonarQube analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
