@@ -70,8 +70,9 @@ public sealed class GuideRefreshHostedService : IHostedService, IDisposable
                 await Task.Delay(CheckInterval, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            _logger.LogDebug(ex, "HDHomeRun guide background refresh loop stopped.");
         }
     }
 

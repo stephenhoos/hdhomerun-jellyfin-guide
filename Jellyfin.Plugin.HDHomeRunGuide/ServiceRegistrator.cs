@@ -17,7 +17,6 @@ public sealed class ServiceRegistrator : IPluginServiceRegistrator
     {
         serviceCollection.AddSingleton<HDHomeRunClient>();
         serviceCollection.AddSingleton<XmlTvGuideService>();
-        serviceCollection.AddSingleton<GuideWriter>();
         serviceCollection.AddSingleton<PluginLogService>();
         serviceCollection.AddSingleton<LiveTvConfigurator>();
         serviceCollection.AddSingleton<HDHomeRunGuideService>();

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>HDHomeRun Guide</title>
 </head>
@@ -52,10 +52,10 @@
                     </label>
 
                     <div class="button-submit-section">
-                        <button is="emby-button" type="button" class="raised button-submit block" id="btnAddMyTuners" onclick="return window.hdhomerunGuideConfig.addMyTuners(this);">
+                        <button is="emby-button" type="button" class="raised button-submit block" id="btnAddMyTuners" onclick="return globalThis.hdhomerunGuideConfig.addMyTuners(this);">
                             <span>Find and Add My Tuners</span>
                         </button>
-                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnRefresh" onclick="return window.hdhomerunGuideConfig.refreshNow(this);">
+                        <button is="emby-button" type="button" class="raised button-cancel block" id="btnRefresh" onclick="return globalThis.hdhomerunGuideConfig.refreshNow(this);">
                             <span>Refresh Now</span>
                         </button>
                         <button is="emby-button" type="submit" class="raised button-submit block">
@@ -108,35 +108,10 @@
 
                 function applyDefaultRefreshHours(configPage, force) {
                     const input = configPage.querySelector('#txtRefreshHours');
-                    const current = parseInt(input.value || '0', 10);
+                    const current = Number.parseInt(input.value || '0', 10);
                     if (force || !current || current === freeRefreshHours || current === paidRefreshHours) {
                         input.value = defaultRefreshHours(configPage);
                     }
-                }
-
-                function renderTuners(configPage, tuners) {
-                    const container = configPage.querySelector('#hdhomerunGuideResults');
-                    container.innerHTML = '';
-                    if (!tuners || !tuners.length) {
-                        container.textContent = 'No HDHomeRun tuners found.';
-                        return;
-                    }
-
-                    tuners.forEach(function (tuner) {
-                        const address = valueOf(tuner, 'address', 'Address');
-                        const friendlyName = valueOf(tuner, 'friendlyName', 'FriendlyName');
-                        const tunerCount = valueOf(tuner, 'tunerCount', 'TunerCount');
-                        const button = document.createElement('button');
-                        button.setAttribute('is', 'emby-button');
-                        button.type = 'button';
-                        button.className = 'raised button-cancel block';
-                        button.textContent = friendlyName + ' ' + address + ' (' + tunerCount + ' tuners)';
-                        button.addEventListener('click', function () {
-                            configPage.querySelector('#txtTunerAddress').value = address;
-                            setStatus(configPage, 'Selected ' + address + '. Save to refresh now and enable automatic updates.');
-                        });
-                        container.appendChild(button);
-                    });
                 }
 
                 function loadConfig(configPage) {
@@ -186,7 +161,7 @@
                     return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         config.TunerAddress = configPage.querySelector('#txtTunerAddress').value;
                         config.ScanSubnet = configPage.querySelector('#txtScanSubnet').value;
-                        config.RefreshIntervalHours = parseInt(configPage.querySelector('#txtRefreshHours').value || defaultRefreshHours(configPage), 10);
+                        config.RefreshIntervalHours = Number.parseInt(configPage.querySelector('#txtRefreshHours').value || defaultRefreshHours(configPage), 10);
                         config.SkipDisabledChannels = configPage.querySelector('#chkSkipDrm').checked;
                         config.RequestPaidXmlTvGuideData = configPage.querySelector('#chkRequestPaidXmlTvGuideData').checked;
                         config.XmlTvAccountEmail = configPage.querySelector('#txtXmlTvAccountEmail').value;
@@ -262,7 +237,7 @@
 
                 }
 
-                window.hdhomerunGuideConfig = {
+                globalThis.hdhomerunGuideConfig = {
                     addMyTuners: function (button) {
                         clickButton({ target: button });
                         return false;
@@ -273,8 +248,8 @@
                     }
                 };
 
-                if (!window.hdhomerunGuideConfigDelegatesBound) {
-                    window.hdhomerunGuideConfigDelegatesBound = true;
+                if (!globalThis.hdhomerunGuideConfigDelegatesBound) {
+                    globalThis.hdhomerunGuideConfigDelegatesBound = true;
                     document.addEventListener('submit', submitForm);
                     document.addEventListener('change', function (event) {
                         if (event.target && event.target.id === 'chkRequestPaidXmlTvGuideData') {

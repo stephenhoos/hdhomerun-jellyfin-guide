@@ -12,7 +12,7 @@ namespace Jellyfin.Plugin.HDHomeRunGuide.Services;
 /// <summary>
 /// Writes Jellyfin-compatible XMLTV and M3U files.
 /// </summary>
-public sealed class GuideWriter
+public static class GuideWriter
 {
     /// <summary>
     /// Writes SiliconDust XMLTV and M3U files.
@@ -23,7 +23,7 @@ public sealed class GuideWriter
     /// <param name="skipDrm">Whether to skip DRM channels in M3U.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Refresh result.</returns>
-    public async Task<RefreshResult> WriteXmlTvAsync(
+    public static async Task<RefreshResult> WriteXmlTvAsync(
         string xmlTv,
         IReadOnlyList<LineupItem> lineup,
         string outputDirectory,
